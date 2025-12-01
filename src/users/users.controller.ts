@@ -35,7 +35,7 @@ export class UserController {
     return this.usersService.editUser(userId, dto);
   }
 
-  @Post('favourite')
+  @Post('favourite/update')
   addFavorite(@GetUser('id') userId: string, @Body() dto: CreateFavoriteDto) {
     return this.usersService.addFavorite(userId, dto);
   }
@@ -47,5 +47,10 @@ export class UserController {
     @Param('id', ParseUUIDPipe) propertyId: string,
   ) {
     return this.usersService.removeFavorite(userId, propertyId);
+  }
+
+  @Get('favourite')
+  getAllFavorites(@GetUser('id') userId: string) {
+    return this.usersService.getAllUserFavorites(userId);
   }
 }

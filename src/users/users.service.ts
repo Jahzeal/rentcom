@@ -88,4 +88,16 @@ export class UsersService {
       throw error;
     }
   }
+
+  async getAllUserFavorites(userId: string) {
+    return this.prisma.favorite.findMany({
+      where: { userId },
+      include: {
+        property: true, // return full property details
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
 }
