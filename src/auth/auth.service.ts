@@ -15,6 +15,7 @@ import { SocialLoginDto } from './dto/social-login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { UserRole } from 'generated/prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -37,7 +38,7 @@ export class AuthService {
           Lastname: dto.LastName,
         },
       });
-      return this.signToken(user.id, user.email); // Return the created user
+      return this.signToken(user.id, user.email,user.role); // Return the created user
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -62,13 +63,14 @@ export class AuthService {
     const pdMatches = await argon.verify(user.hash, dto.password);
     if (!pdMatches) throw new ForbiddenException('Credentials incorrect');
     // if pass doesnt incorrect throw exemption
-    return this.signToken(user.id, user.email);
+    return this.signToken(user.id, user.email,user.role);
   }
 
-  async signToken(userId: string, email: string): Promise<{ access_token: string }> {
+  async signToken(userId: string, email: string,role: UserRole): Promise<{ access_token: string }> {
     const payload = {
       sub: userId,
       email,
+      role
     };
     const jwtSecret = this.config.get<string>('JWT_SECRET');
     const token = await this.jwt.signAsync(payload, {
