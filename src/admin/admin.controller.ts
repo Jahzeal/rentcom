@@ -40,8 +40,8 @@ export class AdminController {
   }
 
   @Delete('deleteUser/:id')
-  deleteUser() {
-    return this.adminService.deleteUser('id');
+  deleteUser(@GetUser('id') userId: string) {
+    return this.adminService.deleteUser(userId);
   }
 
   @Patch('update-user/:id')
