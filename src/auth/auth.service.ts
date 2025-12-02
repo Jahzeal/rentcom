@@ -36,6 +36,7 @@ export class AuthService {
           hash,
           Firstname: dto.FirstName,
           Lastname: dto.LastName,
+          role: dto.role,
         },
       });
       return this.signToken(user.id, user.email,user.role); // Return the created user
