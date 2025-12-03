@@ -13,6 +13,7 @@ import { Roles } from 'src/auth/decorator/roles.decorator';
 import { GetUser } from 'src/auth/decorator/get-user.decorator';
 import type { User } from '@prisma/client';
 import { editUserDto } from 'src/users/dto/users.dto';
+import { GetId } from './decorators/getid.decorator';
 
 @Controller('admin')
 @UseGuards(JwtGuard, RolesGuard) // attach the RolesGuard to all routes in this controller
@@ -40,12 +41,13 @@ export class AdminController {
   }
 
   @Delete('deleteUser/:id')
-  deleteUser(@GetUser('id') userId: string) {
+  deleteUser(@GetId('id') userId: string) {
+    console.log(`user with id ${userId} deleted`);
     return this.adminService.deleteUser(userId);
   }
 
   @Patch('update-user/:id')
-  async editUser(@GetUser('id') userId: string, @Body() dto: editUserDto) {
+  async editUser(@GetId('id') userId: string, @Body() dto: editUserDto) {
     return this.adminService.editUser(userId, dto);
   }
 }

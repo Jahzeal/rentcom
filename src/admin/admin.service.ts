@@ -28,9 +28,18 @@ export class AdminService {
     return this.prisma.property.findMany();
   }
   async deleteUser(userId: string) {
-    return this.prisma.user.delete({
-      where: { id: userId },
-    });
+    try {
+      return this.prisma.user.delete({
+        where: { id: userId },
+      });
+    } catch (error) {
+      // Prisma throws P2025 if record doesn't exist
+      if (error.code === 'P2025') {
+        console.log('user not found');
+        throw new NotFoundException('User not found');
+      }
+      throw error;
+    }
   }
   async editUser(userId: string, dto: editUserDto) {
     const data: any = { ...dto };
