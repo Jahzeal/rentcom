@@ -4,8 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
-  }
+}
 
 model User {
   id        String     @id @default(uuid())
@@ -40,7 +39,7 @@ model Property {
   bookings    Booking[]
   favoritedBy Favorite[]
   rentals     Rental[]
-  amenities   Amenity[]    @relation("PropertyAmenities")
+  amenities   Amenity[]
 }
 
 model Favorite {
@@ -55,9 +54,10 @@ model Favorite {
 }
 
 model Amenity {
+  propertyId String
   id         String     @id @default(uuid())
   name       String     @unique
-  properties Property[] @relation("PropertyAmenities")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 }
 
 model Booking {
