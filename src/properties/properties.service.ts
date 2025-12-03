@@ -18,8 +18,11 @@ export class PropertiesService {
         typerooms: dto.typerooms,
         baths: dto.baths,
         amenities: {
-          connect: dto.amenities.map((name) => ({ name })),
+          create: dto.amenities.map((name) => ({ name })),
         },
+      },
+      include: {
+        amenities: true,
       },
     });
   }

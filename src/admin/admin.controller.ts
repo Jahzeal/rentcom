@@ -40,6 +40,12 @@ export class AdminController {
     return this.adminService.getAllProperties();
   }
 
+  @Delete('deleteproperty/:id')
+  deleteProperty(@GetId('id') propertyId: string) {
+    console.log(`property with id ${propertyId} deleted`);
+    return this.adminService.deleteProperty(propertyId);
+  }
+
   @Delete('deleteUser/:id')
   deleteUser(@GetId('id') userId: string) {
     console.log(`user with id ${userId} deleted`);

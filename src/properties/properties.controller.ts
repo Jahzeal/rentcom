@@ -15,4 +15,10 @@ export class PropertiesController {
   createProperty(@Body() dto: CreatePropertyDto) {
     return this.propertyService.createProperty(dto);
   }
+
+  // @Patch('editProperty')
+  // @Roles('ADMIN')
+  // editProperty(@Body() dto: EditPropertyDto) {
+  //   return this.propertyService.editProperty(dto);
+  // }
 }

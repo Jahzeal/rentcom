@@ -39,3 +39,36 @@ export class CreatePropertyDto {
   @IsArray()
   amenities: string[];
 }
+
+export class EditPropertyDto {
+  @IsString()
+  title: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsEnum(PropertyType)
+  type: PropertyType;
+
+  @IsNumber()
+  price: number;
+
+  @IsString()
+  address: string;
+
+  @IsArray()
+  images: string[];
+
+  @IsNumber()
+  beds: number;
+
+  @IsString()
+  typerooms: string;
+
+  @IsNumber()
+  baths: number;
+
+  @IsArray()
+  amenities: string[];
+}

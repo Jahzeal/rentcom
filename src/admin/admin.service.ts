@@ -25,7 +25,26 @@ export class AdminService {
   }
 
   async getAllProperties() {
-    return this.prisma.property.findMany();
+    return this.prisma.property.findMany({
+      include: {
+        amenities: true,
+      },
+    });
+  }
+
+  async deleteProperty(propetyId: string) {
+    try {
+      return this.prisma.property.delete({
+        where: { id: propetyId },
+      });
+    } catch (error) {
+      // Prisma throws P2025 if record doesn't exist
+      if (error.code === 'P2025') {
+        console.log('property not found');
+        throw new NotFoundException('Property not found');
+      }
+      throw error;
+    }
   }
   async deleteUser(userId: string) {
     try {
