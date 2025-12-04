@@ -57,7 +57,7 @@ model Favorite {
 model Amenity {
   propertyId String
   id         String     @id @default(uuid())
-  name       String     @unique
+  name       String     
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 }
 
