@@ -19,8 +19,12 @@ export class PropertiesService {
         beds: dto.beds,
         typerooms: dto.typerooms,
         baths: dto.baths,
+
         amenities: {
-          create: dto.amenities.map((name) => ({ name })),
+          connectOrCreate: dto.amenities.map((name) => ({
+            where: { name }, // find amenity by unique name
+            create: { name }, // create if doesn't exist
+          })),
         },
       },
       include: {
