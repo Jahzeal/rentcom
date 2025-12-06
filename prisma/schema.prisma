@@ -22,6 +22,18 @@ model User {
   favorites Favorite[]
   payments  Payment[]
   rentals   Rental[]
+  tourRequests   TourRequest[]
+  appliesRequested appliesRequested[]
+
+}
+model appliesRequested{
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  requestedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId String?
+  status     String   @default("PENDING")
 }
 
 model Property {
@@ -41,6 +53,19 @@ model Property {
   favoritedBy Favorite[]
   rentals     Rental[]
   amenities   Amenity[]
+  tourRequests   TourRequest[]
+  appliesRequested appliesRequested[]
+
+}
+
+model TourRequest {
+  id         String   @id @default(uuid())
+  userId     String
+  propertyId String
+  requestedAt DateTime @default(now())
+  status     String   @default("PENDING")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Favorite {

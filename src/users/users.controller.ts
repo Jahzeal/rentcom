@@ -14,7 +14,12 @@ import {
 import type { User } from '@prisma/client';
 import { GetUser } from 'src/auth/decorator';
 import { JwtGuard } from 'src/auth/guard';
-import { editUserDto } from './dto';
+import {
+  ApplyForPropertyDto,
+  CancelTour,
+  editUserDto,
+  RequestTourDto,
+} from './dto';
 import { UsersService } from './users.service'; // 💡 Import the UsersService
 import { CreateFavoriteDto } from './dto/favourite.dto';
 
@@ -52,5 +57,33 @@ export class UserController {
   @Get('favourite')
   getAllFavorites(@GetUser('id') userId: string) {
     return this.usersService.getAllUserFavorites(userId);
+  }
+
+  @Post('tour-request')
+  async requestTour(
+    @GetUser('id') userId: string,
+    @Body() dto: RequestTourDto,
+  ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return this.usersService.requestTour(userId, dto);
+  }
+
+  @Delete('cancel-tours')
+  async cancelTour(@GetUser('id') userid: string, @Body() dto: CancelTour) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return this.usersService.cancelTour(userid, dto);
+  }
+
+  @Get('tour-requests')
+  getTourRequets(@GetUser('id') userid: string) {
+    return this.usersService.getUserTourRequests(userid);
+  }
+
+  @Post('requestToApply')
+  requestToApply(
+    @GetUser('id') userid: string,
+    @Body() dto: ApplyForPropertyDto,
+  ) {
+    return this.usersService.requestToApply(userid, dto);
   }
 }

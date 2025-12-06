@@ -17,3 +17,20 @@ export class editUserDto {
   @IsOptional()
   password?: string;
 }
+
+export class RequestTourDto {
+  @IsString()
+  propertyId: string;
+}
+
+export class ApplyForPropertyDto {
+  @IsString()
+  propertyId: string;
+}
+
+export class CancelTour {
+  @IsString()
+  propertyId: string;
+  @IsString()
+  tourId: string;
+}
