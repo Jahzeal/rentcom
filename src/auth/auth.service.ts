@@ -15,7 +15,7 @@ import { SocialLoginDto } from './dto/social-login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { UserRole } from 'generated/prisma/client';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
