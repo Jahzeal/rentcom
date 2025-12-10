@@ -9,7 +9,7 @@ async function bootstrap() {
   const ALLOWED_ORIGINS = [
     'https://renant.netlify.app',
     'https://www.renant.netlify.app',
-    'http://localhost:3001',
+    'http://localhost:3000',
     'http://127.0.0.1:3000',
   ];
 
