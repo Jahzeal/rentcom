@@ -20,46 +20,45 @@ export class RentalsService {
   }
 
   async filterRentals(dto: FilterpropertyDto) {
-    // STEP 1: Prisma filtering (except price)
+    const orFilters: any[] = [];
+
+    // Search location OR address
+    if (dto.searchLocation) {
+      orFilters.push(
+        { location: { contains: dto.searchLocation, mode: 'insensitive' } },
+        { address: { contains: dto.searchLocation, mode: 'insensitive' } },
+      );
+    }
+
+    // Keyword search
+    if (dto.moreOptions?.keywords) {
+      orFilters.push(
+        { title: { contains: dto.moreOptions.keywords, mode: 'insensitive' } },
+        {
+          description: {
+            contains: dto.moreOptions.keywords,
+            mode: 'insensitive',
+          },
+        },
+        {
+          amenities: {
+            some: {
+              name: {
+                contains: dto.moreOptions.keywords,
+                mode: 'insensitive',
+              },
+            },
+          },
+        },
+      );
+    }
+
+    // STEP 1: Prisma filtering
     let properties = await this.prisma.property.findMany({
       where: {
         ...(dto.propertyType && { type: dto.propertyType }),
-
         ...(dto.roomType && { typerooms: dto.roomType }),
-
-        ...(dto.searchLocation && {
-          OR: [
-            { location: { contains: dto.searchLocation, mode: 'insensitive' } },
-            { address: { contains: dto.searchLocation, mode: 'insensitive' } },
-          ],
-        }),
-
-        ...(dto.moreOptions?.keywords && {
-          OR: [
-            {
-              title: {
-                contains: dto.moreOptions.keywords,
-                mode: 'insensitive',
-              },
-            },
-            {
-              description: {
-                contains: dto.moreOptions.keywords,
-                mode: 'insensitive',
-              },
-            },
-            {
-              amenities: {
-                some: {
-                  name: {
-                    contains: dto.moreOptions.keywords,
-                    mode: 'insensitive',
-                  },
-                },
-              },
-            },
-          ],
-        }),
+        ...(orFilters.length > 0 && { OR: orFilters }),
       },
       include: {
         amenities: true,
@@ -72,12 +71,21 @@ export class RentalsService {
       const { min, max } = dto.price;
 
       properties = properties.filter((property) => {
-        if (!Array.isArray(property.price)) return false;
+        const priceJson = property.price;
 
-        // Check if ANY price fits the range
-        return property.price.some(
-          (p: { price: number }) => p.price >= min && p.price <= max,
-        );
+        if (!Array.isArray(priceJson)) return false;
+
+        return priceJson.some((item) => {
+          if (
+            typeof item === 'object' &&
+            item !== null &&
+            'price' in item &&
+            typeof item.price === 'number'
+          ) {
+            return item.price >= min && item.price <= max;
+          }
+          return false;
+        });
       });
     }
 
