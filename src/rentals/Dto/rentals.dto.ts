@@ -6,7 +6,7 @@ import {
   IsNumber,
   IsObject,
 } from 'class-validator';
-import { PropertyType } from 'generated/prisma/client';
+import { PropertyType } from '@prisma/client';
 
 export class rentalsDto {
   @IsString()
