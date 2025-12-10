@@ -8,64 +8,66 @@ datasource db {
 }
 
 model User {
-  id        String     @id @default(uuid())
-  email     String     @unique
-  hash      String
-  Screenname String?     @unique
-  Firstname String?
-  Lastname  String?
-  phone     String?
-  role      UserRole   @default(USER)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  bookings  Booking[]
-  favorites Favorite[]
-  payments  Payment[]
-  rentals   Rental[]
-  tourRequests   TourRequest[]
-  appliesRequested appliesRequested[]
-
+  id               String            @id @default(uuid())
+  email            String            @unique
+  hash             String
+  Firstname        String?
+  Lastname         String?
+  phone            String?
+  role             UserRole          @default(USER)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  Screenname       String?           @unique
+  bookings         Booking[]
+  favorites        Favorite[]
+  payments         Payment[]
+  rentals          Rental[]
+  tourRequests     TourRequest[]
+  appliesRequested appliesRequested?
 }
-model appliesRequested{
-  id        String     @id @default(uuid())
-  userId    String     @unique
-  requestedAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  property   Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  propertyId String?
-  status     String   @default("PENDING")
+
+model appliesRequested {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  requestedAt DateTime  @default(now())
+  propertyId  String?
+  status      String    @default("PENDING")
+  property    Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Property {
-  id          String       @id @default(uuid())
-  title       String
-  description String?
-  type        PropertyType
-  price       Int
-  address     String
-  images      String[]
-  beds        Int
-  typerooms   String
-  baths       Int
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  bookings    Booking[]
-  favoritedBy Favorite[]
-  rentals     Rental[]
-  amenities   Amenity[]
-  tourRequests   TourRequest[]
+  id               String             @id @default(uuid())
+  title            String
+  description      String?
+  type             PropertyType
+  address          String
+  images           String[]
+  beds             Int
+  typerooms        String
+  baths            Int
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  coords           Json
+  location         String
+  offers           String
+  price            Json
+  amenities        Amenity[]
+  bookings         Booking[]
+  favoritedBy      Favorite[]
+  rentals          Rental[]
+  tourRequests     TourRequest[]
   appliesRequested appliesRequested[]
-
 }
 
 model TourRequest {
-  id         String   @id @default(uuid())
-  userId     String
-  propertyId String
+  id          String   @id @default(uuid())
+  userId      String
+  propertyId  String
   requestedAt DateTime @default(now())
-  status     String   @default("PENDING")
-  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String   @default("PENDING")
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Favorite {
@@ -80,9 +82,9 @@ model Favorite {
 }
 
 model Amenity {
+  id         String   @id @default(uuid())
+  name       String   @unique
   propertyId String
-  id         String     @id @default(uuid())
-  name       String     @unique
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 }
 

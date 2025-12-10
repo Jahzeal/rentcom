@@ -19,6 +19,9 @@ export class PropertiesService {
         beds: dto.beds,
         typerooms: dto.typerooms,
         baths: dto.baths,
+        offers: dto.offers,
+        location: dto.location,
+        coords: dto.coords as Prisma.InputJsonValue,
 
         amenities: {
           connectOrCreate: dto.amenities.map((name) => ({

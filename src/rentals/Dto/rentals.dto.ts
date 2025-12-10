@@ -1,14 +1,14 @@
 import {
-  IsString,
-  IsNumber,
-  IsArray,
   IsOptional,
+  IsString,
   IsEnum,
+  IsArray,
+  IsNumber,
   IsObject,
 } from 'class-validator';
-import { PropertyType } from '@prisma/client';
+import { PropertyType } from 'generated/prisma/client';
 
-export class CreatePropertyDto {
+export class rentalsDto {
   @IsString()
   title: string;
 
@@ -50,35 +50,30 @@ export class CreatePropertyDto {
   coords: any;
 }
 
-export class EditPropertyDto {
-  @IsString()
-  title: string;
+export class FilterpropertyDto {
+  @IsOptional()
+  @IsEnum(PropertyType)
+  propertyType?: PropertyType;
+
+  @IsOptional()
+  @IsObject()
+  price?: {
+    min: number;
+    max: number;
+  };
 
   @IsOptional()
   @IsString()
-  description?: string;
+  roomType?: string;
 
-  @IsEnum(PropertyType)
-  type: PropertyType;
-
-  @IsNumber()
-  price: number;
-
+  @IsOptional()
   @IsString()
-  address: string;
+  searchLocation?: string;
 
-  @IsArray()
-  images: string[];
-
-  @IsNumber()
-  beds: number;
-
-  @IsString()
-  typerooms: string;
-
-  @IsNumber()
-  baths: number;
-
-  @IsArray()
-  amenities: string[];
+  @IsOptional()
+  @IsObject()
+  moreOptions?: {
+    keywords?: string;
+    selectedPets?: string[];
+  };
 }
