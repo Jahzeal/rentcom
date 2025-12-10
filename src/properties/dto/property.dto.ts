@@ -61,7 +61,7 @@ export class EditPropertyDto {
   @IsEnum(PropertyType)
   type: PropertyType;
 
-  @IsNumber()
+  @IsArray()
   price: any[]; // <-- Because it's JSON (array of objects)
   @IsString()
   address: string;
