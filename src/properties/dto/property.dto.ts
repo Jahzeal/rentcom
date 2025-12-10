@@ -62,8 +62,7 @@ export class EditPropertyDto {
   type: PropertyType;
 
   @IsNumber()
-  price: number;
-
+  price: any[]; // <-- Because it's JSON (array of objects)
   @IsString()
   address: string;
 

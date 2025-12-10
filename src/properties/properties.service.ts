@@ -13,7 +13,7 @@ export class PropertiesService {
         title: dto.title,
         description: dto.description,
         type: dto.type,
-        price: dto.price,
+        price: dto.price as Prisma.InputJsonValue,
         address: dto.address,
         images: dto.images,
         beds: dto.beds,
