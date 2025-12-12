@@ -23,19 +23,20 @@ model User {
   payments         Payment[]
   rentals          Rental[]
   tourRequests     TourRequest[]
-  appliesRequested appliesRequested?
+  appliesRequested appliesRequested[]   // FIXED: this is now many []
 }
+
 
 model appliesRequested {
   id          String    @id @default(uuid())
-  userId      String  
+  userId      String
+  propertyId  String
   requestedAt DateTime  @default(now())
-  propertyId  String?
   status      String    @default("PENDING")
-  property    Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
-   @@unique([userId, propertyId])
+  @@unique([userId, propertyId])
 }
 
 model Property {
