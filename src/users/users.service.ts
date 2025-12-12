@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/require-await */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -77,37 +74,33 @@ export class UsersService {
   async requestToApply(userId: string, dto: ApplyForPropertyDto) {
     const { propertyId } = dto;
 
-    // 1️⃣ Check if property exists
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
-      select: { id: true },
     });
 
     if (!property) {
       throw new NotFoundException('Property not found');
     }
 
-    // 2️⃣ Check for existing tour request
     const existing = await this.prisma.appliesRequested.findFirst({
       where: { userId, propertyId },
-      select: { id: true },
     });
 
     if (existing) {
-      throw new BadRequestException('Tour already requested for this property');
+      throw new BadRequestException('already applied for this property');
     }
 
-    // 3️⃣ Create tour request
-    return this.prisma.appliesRequested.create({
+    const request = await this.prisma.appliesRequested.create({
       data: { userId, propertyId },
-      select: {
-        id: true,
-        userId: true,
-        propertyId: true,
-        requestedAt: true,
-      },
     });
+
+    return {
+      message: 'Request submitted',
+      property, // 🔥 Return full property object
+      request,
+    };
   }
+
   async getUserTourRequests(userId: string) {
     return this.prisma.tourRequest.findMany({
       where: { userId },
