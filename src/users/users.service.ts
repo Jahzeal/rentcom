@@ -200,4 +200,16 @@ export class UsersService {
       },
     });
   }
+
+  async getAllUserRequestApplied(userId: string) {
+    return this.prisma.favorite.findMany({
+      where: { userId },
+      include: {
+        property: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
 }

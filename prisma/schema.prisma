@@ -28,12 +28,14 @@ model User {
 
 model appliesRequested {
   id          String    @id @default(uuid())
-  userId      String    @unique
+  userId      String  
   requestedAt DateTime  @default(now())
   propertyId  String?
   status      String    @default("PENDING")
   property    Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+   @@unique([userId, propertyId])
 }
 
 model Property {

@@ -87,8 +87,8 @@ export class UserController {
     return this.usersService.requestToApply(userid, dto);
   }
 
-  // @Get('appliesRequested')
-  // getAppliesRequested(@GetUser('id') userid: string) {
-  //   return this.usersService.getAppliesRequested(userid);
-  // }
+  @Get('appliesRequested')
+  getAppliesRequested(@GetUser('id') userid: string) {
+    return this.usersService.getAllUserRequestApplied(userid);
+  }
 }
