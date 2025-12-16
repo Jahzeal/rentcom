@@ -64,13 +64,11 @@ export class UserController {
     @GetUser('id') userId: string,
     @Body() dto: RequestTourDto,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.usersService.requestTour(userId, dto);
   }
 
   @Delete('cancel-tours')
   async cancelTour(@GetUser('id') userid: string, @Body() dto: CancelTour) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.usersService.cancelTour(userid, dto);
   }
 
@@ -89,6 +87,7 @@ export class UserController {
 
   @Get('appliesRequested')
   getAppliesRequested(@GetUser('id') userid: string) {
+    console.log('🔥 JWT userId:', userid);
     return this.usersService.getAllUserRequestApplied(userid);
   }
 }

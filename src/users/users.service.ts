@@ -101,18 +101,6 @@ export class UsersService {
     };
   }
 
-  async getUserTourRequests(userId: string) {
-    return this.prisma.tourRequest.findMany({
-      where: { userId },
-      include: {
-        property: true, // return full property details
-      },
-      orderBy: {
-        requestedAt: 'desc',
-      },
-    });
-  }
-
   // Option A: Explicit Check
   async addFavorite(userId: string, dto: { propertyId: string }) {
     const { propertyId } = dto;
@@ -202,13 +190,26 @@ export class UsersService {
   }
 
   async getAllUserRequestApplied(userId: string) {
-    return this.prisma.favorite.findMany({
+    const applies = await this.prisma.appliesRequested.findMany({
+      where: { userId },
+      include: { property: true },
+    });
+    console.log(
+      'Applies returned:',
+      applies.length,
+      applies.map((a) => a.id),
+    );
+    return applies;
+  }
+
+  async getUserTourRequests(userId: string) {
+    return this.prisma.tourRequest.findMany({
       where: { userId },
       include: {
-        property: true,
+        property: true, // return full property details
       },
       orderBy: {
-        createdAt: 'desc',
+        requestedAt: 'desc',
       },
     });
   }
