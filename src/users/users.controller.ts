@@ -87,7 +87,6 @@ export class UserController {
 
   @Get('appliesRequested')
   getAppliesRequested(@GetUser('id') userid: string) {
-    console.log('🔥 JWT userId:', userid);
     return this.usersService.getAllUserRequestApplied(userid);
   }
 }

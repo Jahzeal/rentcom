@@ -1,28 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { FilterpropertyDto } from './Dto/rentals.dto';
+import { FilterPropertyDto } from './Dto/rentals.dto';
+import { Prisma, Property } from '@prisma/client';
 
 @Injectable()
 export class RentalsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async getRentals() {
-    // Implement your logic to get rentals based on the dto
-    return this.prisma.property.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
-      include: {
-        amenities: true,
-        // Include any other necessary relations like user (if showing agent info)
-      },
-    });
+  /**
+   * Public method to fetch rentals.
+   * Handles filters, search, pagination, and property type.
+   */
+  async getRentals(dto: FilterPropertyDto = {}) {
+    return this.applyFilters(dto);
   }
 
-  async filterRentals(dto: FilterpropertyDto) {
-    const orFilters: any[] = [];
+  /**
+   * Private helper that contains filtering and pagination logic.
+   */
+  private async applyFilters(dto: FilterPropertyDto) {
+    const page = dto.page ?? 1;
+    const limit = dto.limit ?? 12;
 
-    // Search location OR address
+    const orFilters: Prisma.PropertyWhereInput[] = [];
+
+    // Location or address search
     if (dto.searchLocation) {
       orFilters.push(
         { location: { contains: dto.searchLocation, mode: 'insensitive' } },
@@ -30,44 +32,41 @@ export class RentalsService {
       );
     }
 
-    // Keyword search
+    // Keyword search across title, description, amenities
     if (dto.moreOptions?.keywords) {
+      const keyword = dto.moreOptions.keywords;
       orFilters.push(
-        { title: { contains: dto.moreOptions.keywords, mode: 'insensitive' } },
-        {
-          description: {
-            contains: dto.moreOptions.keywords,
-            mode: 'insensitive',
-          },
-        },
+        { title: { contains: keyword, mode: 'insensitive' } },
+        { description: { contains: keyword, mode: 'insensitive' } },
         {
           amenities: {
-            some: {
-              name: {
-                contains: dto.moreOptions.keywords,
-                mode: 'insensitive',
-              },
-            },
+            some: { name: { contains: keyword, mode: 'insensitive' } },
           },
         },
       );
     }
 
-    // STEP 1: Prisma filtering
-    let properties = await this.prisma.property.findMany({
-      where: {
-        ...(dto.propertyType && { type: dto.propertyType }),
-        ...(dto.roomType && { typerooms: dto.roomType }),
-        ...(orFilters.length > 0 && { OR: orFilters }),
-      },
+    // Base Prisma where clause
+    const whereClause: Prisma.PropertyWhereInput = {
+      ...(dto.propertyType && { type: dto.propertyType }),
+      ...(dto.roomType && { typerooms: dto.roomType }),
+      ...(orFilters.length > 0 && { OR: orFilters }),
+    };
+
+    // Fetch paginated properties
+    let properties: Property[] = await this.prisma.property.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: (page - 1) * limit,
       include: {
         amenities: true,
-        rentals: true,
+        // rentals: true,
       },
     });
 
-    // STEP 2: Apply price filter manually
-    if (dto.price?.min !== undefined && dto.price?.max !== undefined) {
+    // JSON price filter (TypeScript-safe)
+    if (dto.price?.min !== undefined || dto.price?.max !== undefined) {
       const { min, max } = dto.price;
 
       properties = properties.filter((property) => {
@@ -75,20 +74,35 @@ export class RentalsService {
 
         if (!Array.isArray(priceJson)) return false;
 
-        return priceJson.some((item) => {
-          if (
-            typeof item === 'object' &&
-            item !== null &&
-            'price' in item &&
-            typeof item.price === 'number'
-          ) {
-            return item.price >= min && item.price <= max;
-          }
-          return false;
+        return priceJson.some((item): boolean => {
+          if (typeof item !== 'object' || item === null) return false;
+
+          // Narrow type to object with optional price
+          const priceItem = item as { price?: number };
+
+          if (priceItem.price === undefined) return false;
+          if (min !== undefined && priceItem.price < min) return false;
+          if (max !== undefined && priceItem.price > max) return false;
+
+          return true;
         });
       });
     }
 
-    return properties;
+    // Total count (ignores in-memory price filtering)
+    const total = await this.prisma.property.count({
+      where: whereClause,
+    });
+
+    // Product-ready response
+    return {
+      data: properties,
+      meta: {
+        page,
+        limit,
+        total,
+        hasNextPage: page * limit < total,
+      },
+    };
   }
 }

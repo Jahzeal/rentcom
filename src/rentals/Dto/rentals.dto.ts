@@ -5,7 +5,11 @@ import {
   IsArray,
   IsNumber,
   IsObject,
+  ValidateNested,
+  Min,
+  Max,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PropertyType } from '@prisma/client';
 
 export class rentalsDto {
@@ -50,17 +54,37 @@ export class rentalsDto {
   coords: any;
 }
 
-export class FilterpropertyDto {
+export class PriceRangeDto {
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  min?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  max?: number;
+}
+
+export class MoreOptionsDto {
+  @IsOptional()
+  @IsString()
+  keywords?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  selectedPets?: string[];
+}
+export class FilterPropertyDto {
   @IsOptional()
   @IsEnum(PropertyType)
   propertyType?: PropertyType;
 
   @IsOptional()
-  @IsObject()
-  price?: {
-    min: number;
-    max: number;
-  };
+  @ValidateNested()
+  @Type(() => PriceRangeDto)
+  price?: PriceRangeDto;
 
   @IsOptional()
   @IsString()
@@ -71,9 +95,21 @@ export class FilterpropertyDto {
   searchLocation?: string;
 
   @IsOptional()
-  @IsObject()
-  moreOptions?: {
-    keywords?: string;
-    selectedPets?: string[];
-  };
+  @ValidateNested()
+  @Type(() => MoreOptionsDto)
+  moreOptions?: MoreOptionsDto;
+
+  // ✅ Pagination
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  page?: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  @Max(50)
+  limit?: number = 12;
 }
