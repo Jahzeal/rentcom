@@ -80,4 +80,13 @@ export class EditPropertyDto {
 
   @IsArray()
   amenities: string[];
+
+  @IsObject()
+  coords: any;
+
+  @IsString()
+  offers: string;
+
+  @IsString()
+  location: string;
 }

@@ -194,11 +194,11 @@ export class UsersService {
       where: { userId },
       include: { property: true },
     });
-    console.log(
-      'Applies returned:',
-      applies.length,
-      applies.map((a) => a.id),
-    );
+    // console.log(
+    //   'Applies returned:',
+    //   applies.length,
+    //   applies.map((a) => a.id),
+    // );
     return applies;
   }
 
