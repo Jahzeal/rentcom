@@ -16,6 +16,7 @@ import { editUserDto } from 'src/users/dto/users.dto';
 import { GetId } from './decorators/getid.decorator';
 
 @Controller('admin')
+@Roles('ADMIN')
 @UseGuards(JwtGuard, RolesGuard) // attach the RolesGuard to all routes in this controller
 export class AdminController {
   constructor(private adminService: AdminService) {}
