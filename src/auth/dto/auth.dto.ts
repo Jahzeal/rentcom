@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable prettier/prettier */
 import { UserRole } from '@prisma/client';
-import {IsEmail, IsNotEmpty, IsString,IsOptional} from 'class-validator'
+import {IsEmail, IsNotEmpty, IsString,IsOptional, MinLength} from 'class-validator'
 export class AuthDto{
   @IsEmail()
   @IsNotEmpty()
@@ -67,5 +67,17 @@ export class VerifySignupDto {
   @IsString()
   @IsNotEmpty()
   code: string;
+}
+
+export class ResetPasswordDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  code: string;
+
+  @IsString()
+  @MinLength(8)
+  newPassword: string;
 }
 

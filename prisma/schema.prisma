@@ -19,6 +19,16 @@ model EmailVerification {
   @@index([email])
 }
 
+model PasswordReset {
+  id         String   @id @default(cuid())
+  email      String
+  code       String
+  attempts   Int
+  expiresAt  DateTime
+  lastSentAt DateTime
+}
+
+
 model User {
   id               String            @id @default(uuid())
   email            String            @unique

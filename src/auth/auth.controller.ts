@@ -2,9 +2,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable prettier/prettier */
-import { Body, Controller, HttpCode, HttpStatus, Post,Get } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AuthDto, VerifySignupDto } from './dto';
+import { AuthDto, ResetPasswordDto, VerifySignupDto } from './dto';
 import { SocialLoginDto } from './dto/social-login.dto';
 import { MailService } from 'src/mail/mail.service';
 @Controller('auth')
@@ -38,14 +38,32 @@ export class AuthController {
     return this.authService.signin(dto);
   }
 
-
-@Get('sendVerificationEmail')
-  testEmail() {
-    return this.mailService.sendVerificationCode(
-      'jahzealibeh16@gmail.com',
-      '123456',
-    );
+  @Post('forgot-password')
+  async forgotPassword(@Body('email') email: string) {
+    return this.authService.forgotPassword(email);
   }
+
+  @Post('verify-forgot-password')
+  async verifyForgotPassword(@Body() dto: VerifySignupDto) {
+    return this.authService.verifyForgotPasswordCode(dto);
+  }
+
+ @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+  return this.authService.resetPassword(
+    dto.email,
+    dto.code,
+    dto.newPassword,
+  );
+  }
+
+// @Get('sendVerificationEmail')
+//   testEmail() {
+//     return this.mailService.sendVerificationCode(
+//       'jahzealibeh16@gmail.com',
+//       '123456',
+//     );
+//   }
 
 
 

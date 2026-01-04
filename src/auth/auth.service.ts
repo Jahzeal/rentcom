@@ -32,30 +32,6 @@ export class AuthService {
     private mailService: MailService,
   ) {}
 
-  // async signup(dto: AuthDto) {
-  //   // console.log('DATABASE_URL =', process.env.DATABASE_URL);
-  //   const hash = await argon.hash(dto.password);
-  //   try {
-  //     const user = await this.prisma.user.create({
-  //       data: {
-  //         email: dto.email,
-  //         hash,
-  //         Firstname: dto.FirstName,
-  //         Lastname: dto.LastName,
-  //         role: dto.role,
-  //       },
-  //     });
-  //     return this.signToken(user.id, user.email,user.role); // Return the created user
-  //   } catch (error) {
-  //     if (error instanceof PrismaClientKnownRequestError) {
-  //       if (error.code === 'P2002') {
-  //         throw new ForbiddenException('Credentials already exists'); // Handle unique constraint violation
-  //       }
-  //     }
-  //     console.log('error', error);
-  //     throw new InternalServerErrorException('An error occurred during signup'); // Rethrow other errors
-  //   }
-  // }
    async signup(dto: AuthDto) {
     const email = dto.email.toLowerCase();
 
@@ -193,6 +169,125 @@ export class AuthService {
     return this.signToken(user.id, user.email, user.role);
   }
 
+  async forgotPassword(email: string) {
+    email = email.toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) throw new NotFoundException('User with this email does not exist');
+    // Delete old verification attempts
+    await this.prisma.passwordReset.deleteMany({ where: { email } });
+    // Generate secure 6-digit code
+    const code = randomInt(100000, 999999).toString();
+    // Save verification record
+    await this.prisma.passwordReset.create({
+      data: {
+        email,
+        code,
+        attempts: 0,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min expiry
+        lastSentAt: new Date(),      },
+    });
+    // Send verification email
+    await this.mailService.sendVerificationCode(email, code);
+    return { message: 'Password reset code sent to your email.' };
+  }
+
+  async verifyForgotPasswordCode(dto: VerifySignupDto) {
+  const email = dto.email.toLowerCase();
+
+  const verification = await this.prisma.passwordReset.findFirst({
+    where: {
+      email,
+      code: dto.code,
+      expiresAt: { gt: new Date() },
+    },
+  });
+
+  if (!verification) {
+    const record = await this.prisma.passwordReset.findFirst({ where: { email } });
+
+    if (record) {
+      if (record.attempts + 1 >= 5) {
+        await this.prisma.passwordReset.delete({ where: { id: record.id } });
+        throw new ForbiddenException('Too many failed attempts. Please request a new code.');
+      }
+
+      await this.prisma.passwordReset.update({
+        where: { id: record.id },
+        data: { attempts: { increment: 1 } },
+      });
+    }
+
+    throw new ForbiddenException('Invalid or expired code');
+  }
+
+  // Code is valid — DO NOT update password here
+  return { message: 'Code verified. You may now reset your password.' };
+  }
+  
+  async resetPassword(email: string, code: string, newPassword: string) {
+  email = email.toLowerCase();
+
+  const verification = await this.prisma.passwordReset.findFirst({
+    where: {
+      email,
+      code,
+      expiresAt: { gt: new Date() },
+    },
+  });
+
+  if (!verification) {
+    throw new ForbiddenException('Invalid or expired reset code');
+  }
+
+  const hash = await argon.hash(newPassword);
+
+  const user = await this.prisma.user.update({
+    where: { email },
+    data: { hash },
+  });
+
+  // cleanup
+  await this.prisma.passwordReset.delete({
+    where: { id: verification.id },
+  });
+
+  return { message: 'Password reset successful' };
+}
+
+
+
+  async resendVerificationCodeForgetpassword(email: string) {
+    email = email.toLowerCase();
+
+    const verification = await this.prisma.passwordReset.findFirst({ where: { email } });
+    if (!verification) throw new NotFoundException('No password reset request found.');
+
+    // Cooldown: 60 seconds
+    const now = new Date();
+    const secondsSinceLastSend = (now.getTime() - verification.lastSentAt.getTime()) / 1000;
+    if (secondsSinceLastSend < 60) throw new BadRequestException('Please wait before requesting a new code.');
+
+    // Generate new secure code
+    const newCode = randomInt(100000, 999999).toString();
+
+    // Update record
+    await this.prisma.passwordReset.update({
+      where: { id: verification.id },
+      data: {
+        code: newCode,
+        attempts: 0, // reset attempts
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        lastSentAt: now,
+      },
+    });
+
+    // Send new code
+    await this.mailService.sendVerificationCode(email, newCode);
+
+    return { message: 'A new verification code has been sent to your email.' };
+  }
+
+  
   async signToken(
     userId: string,
     email: string,
@@ -242,4 +337,6 @@ export class AuthService {
       user,
     };
   }
+
+
 }

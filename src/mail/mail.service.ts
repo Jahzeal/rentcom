@@ -42,7 +42,7 @@ export class MailService {
         this.templateID,
         {
           email: email,
-          code,
+          passcode: code,
           time: formattedTime,
         },
         {

@@ -96,7 +96,7 @@ export class UsersService {
 
     return {
       message: 'Request submitted',
-      property, // 🔥 Return full property object
+      property, //  Return full property object
       request,
     };
   }

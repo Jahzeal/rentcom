@@ -36,7 +36,7 @@ export class UserController {
   @Patch('update-me')
   // Note: userId MUST be a string (UUID), not number, based on your schema!
   async editUser(@GetUser('id') userId: string, @Body() dto: editUserDto) {
-    // 💡 CALL THE SERVICE METHOD
+    //  CALL THE SERVICE METHOD
     return this.usersService.editUser(userId, dto);
   }
 
