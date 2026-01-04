@@ -33,23 +33,27 @@ export class MailService {
       minute: '2-digit',
     });
 
+    const templateParams = {
+      email: email,
+      code,
+      time: formattedTime,
+    };
+    console.log('DEBUG: Sending email with params:', templateParams);
+
     try {
       // Use the emailjs object directly.
       // Ensure you pass the publicKey and privateKey in the options object.
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-      await emailjs.send(
+      const response = await emailjs.send(
         this.serviceID,
         this.templateID,
-        {
-          email: email,
-          code,
-          time: formattedTime,
-        },
+        templateParams,
         {
           publicKey: this.publicKey,
           privateKey: this.privateKey,
         },
       );
+      console.log('DEBUG: EmailJS success response:', response);
     } catch (error: unknown) {
       // Logging the error for debugging
       console.error('EmailJS error:', error);

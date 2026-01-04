@@ -71,6 +71,7 @@ export class AuthService {
 
     // Generate secure 6-digit code
     const code = randomInt(100000, 999999).toString();
+    console.log('DEBUG: Generated Verification Code:', code);
 
     // Save verification record
     await this.prisma.emailVerification.create({
