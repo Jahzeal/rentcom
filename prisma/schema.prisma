@@ -46,6 +46,7 @@ model User {
   rentals          Rental[]
   tourRequests     TourRequest[]
   appliesRequested appliesRequested[]   // FIXED: this is now many []
+  enscrolls        enscroll[]
 }
 
 
@@ -125,6 +126,19 @@ model Booking {
   property   Property      @relation(fields: [propertyId], references: [id])
   user       User          @relation(fields: [userId], references: [id])
   payments   Payment[]
+}
+
+model enscroll{
+  id         String   @id @default(uuid())
+  userId     String
+  amount     Int
+  status     String   @default("Available")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id])
+  address    String
+  HostelName String
+  price      Int
 }
 
 model Rental {

@@ -12,6 +12,9 @@ import { RentalsModule } from './rentals/rentals.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
+import { EnscrollService } from './enscroll/enscroll.service';
+import { EnscrollController } from './enscroll/enscroll.controller';
+import { EnscrollModule } from './enscroll/enscroll.module';
 @Module({
   imports: [
     AuthModule,
@@ -25,8 +28,9 @@ import { AuthModule } from './auth/auth.module';
     PaymentsModule,
     AdminModule,
     PrismaModule,
+    EnscrollModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, EnscrollController],
+  providers: [AppService, EnscrollService],
 })
 export class AppModule {}

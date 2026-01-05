@@ -57,14 +57,6 @@ export class AuthController {
   );
   }
 
-// @Get('sendVerificationEmail')
-//   testEmail() {
-//     return this.mailService.sendVerificationCode(
-//       'jahzealibeh16@gmail.com',
-//       '123456',
-//     );
-//   }
-
 
 
 

@@ -1,19 +1,22 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
-// eslint-disable-next-line prettier/prettier
-export class PrismaService extends PrismaClient{
+export class PrismaService extends PrismaClient {
   constructor(config: ConfigService) {
+    const databaseUrl = config.get<string>('DATABASE_URL');
+
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL is not defined');
+    }
+
     super({
       datasources: {
         db: {
-          url: config.get('DATABASE_URL'),
+          url: databaseUrl,
         },
       },
     });
-    console.log(config.get('DATABASE_URL'));
   }
 }
