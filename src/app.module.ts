@@ -14,12 +14,12 @@ import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 // import { EnscrollService } from './enscroll/enscroll.service';
 // import { EnscrollController } from './enscroll/enscroll.controller';
-// import { EnscrollModule } from './enscroll/enscroll.module';
+import { EnscrollModule } from './enscroll/enscroll.module';
 @Module({
   imports: [
     AuthModule,
     ConfigModule.forRoot({
-      isGlobal:true,
+      isGlobal: true,
     }),
     UsersModule,
     PropertiesModule,
@@ -28,12 +28,12 @@ import { AuthModule } from './auth/auth.module';
     PaymentsModule,
     AdminModule,
     PrismaModule,
-    // EnscrollModule,
+    EnscrollModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
 
 // EnscrollController
 // EnscrollService

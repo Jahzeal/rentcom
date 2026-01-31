@@ -1,17 +1,22 @@
 import { IsNotEmpty, IsString } from 'class-validator';
-export class uploadBedspace {
+import { ApiProperty } from '@nestjs/swagger';
+export class UploadBedspace {
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  Name: string;
+  HostelName: string;
 
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  Location: string;
+  address: string;
 
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  Description: string;
+  decription: string;
 
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
   Price: string;

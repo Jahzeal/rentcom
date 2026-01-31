@@ -131,7 +131,6 @@ model Booking {
 model enscroll{
   id         String   @id @default(uuid())
   userId     String
-  amount     Int
   status     String   @default("Available")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -139,6 +138,8 @@ model enscroll{
   address    String
   HostelName String
   price      Int
+  decription String 
+  verified  Boolean  @default(false)
 }
 
 model Rental {

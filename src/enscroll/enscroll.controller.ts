@@ -1,18 +1,24 @@
-// import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-// import { JwtGuard } from 'src/auth/guard';
-// import { RolesGuard } from 'src/auth/guard/roles.guard';
-// import { Roles } from 'src/auth/decorator/roles.decorator';
-// import { uploadBedspace } from './dto/enscroll';
-// import { EnscrollService } from './enscroll.service';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { GetUser } from 'src/auth/decorator';
+import { JwtGuard } from 'src/auth/guard';
+import { UploadBedspace } from './dto/enscroll';
+import { EnscrollService } from './enscroll.service';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
-// @Controller('admin')
-// @UseGuards(JwtGuard, RolesGuard)
-// export class enscrollController {
-//   constructor(private enscrollService: EnscrollService) {}
+@ApiTags('enscroll')
+@ApiBearerAuth()
+@Controller('users/enscroll')
+@UseGuards(JwtGuard)
+export class EnscrollController {
+  constructor(private enscrollService: EnscrollService) { }
 
-//   @Post('uploadbedspace')
-//   @Roles('enscrollusers')
-//   createBedspace(@Body() dto: uploadBedspace) {
-//     return this.enscrollService.createBedSpace(dto);
-//   }
-// }
+  @Post('uploadbedspace')
+  createBedspace(@GetUser('id') userId: string, @Body() dto: UploadBedspace) {
+    return this.enscrollService.uploadBedspace(userId, dto);
+  }
+
+  @Get('getbedspace')
+  getBedspace() {
+    return this.enscrollService.getBedspace();
+  }
+}

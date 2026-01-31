@@ -245,6 +245,7 @@ export class AuthService {
     where: { email },
     data: { hash },
   });
+  
 
   // cleanup
   await this.prisma.passwordReset.delete({
