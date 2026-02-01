@@ -27,6 +27,7 @@ export class EnscrollService {
             email: true,
             Firstname: true,
             Lastname: true,
+            
           },
         },
       },
