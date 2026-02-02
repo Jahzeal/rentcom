@@ -69,6 +69,16 @@ export class VerifySignupDto {
   code: string;
 }
 
+export class verifyPhoneNumberDto{
+  @IsString()
+  @IsNotEmpty()
+  phonenumber: string;
+
+  @IsString()
+  @IsNotEmpty()
+  code: string;
+}
+
 export class ResetPasswordDto {
   @IsEmail()
   email: string;

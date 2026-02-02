@@ -19,6 +19,18 @@ model EmailVerification {
   @@index([email])
 }
 
+model PhoneNumberVerification {
+  id           String   @id @default(uuid())
+  phoneNumber  String
+  code         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  attempts     Int      @default(0)
+  lastSentAt   DateTime @default(now())
+  @@index([phoneNumber])
+}
+
 model PasswordReset {
   id         String   @id @default(cuid())
   email      String
@@ -47,6 +59,8 @@ model User {
   tourRequests     TourRequest[]
   appliesRequested appliesRequested[]   // FIXED: this is now many []
   enscrolls        enscroll[]
+  verified  Boolean  @default(false)
+  phoneNumber String?
 }
 
 
@@ -139,7 +153,6 @@ model enscroll{
   HostelName String
   price      Int
   decription String 
-  verified  Boolean  @default(false)
 }
 
 model Rental {
