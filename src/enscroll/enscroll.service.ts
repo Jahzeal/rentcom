@@ -11,7 +11,7 @@ export class EnscrollService {
         address: dto.address,
         HostelName: dto.HostelName,
         decription: dto.decription,
-        price: Number(dto.price),
+        price: Number(dto.Price),
         userId: userId,
       },
     });
