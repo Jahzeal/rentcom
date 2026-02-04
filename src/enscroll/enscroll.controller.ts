@@ -8,7 +8,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 @ApiTags('enscroll')
 @Controller('users/enscroll')
 export class EnscrollController {
-  constructor(private enscrollService: EnscrollService) { }
+  constructor(private enscrollService: EnscrollService) {}
 
   @Post('uploadbedspace')
   @UseGuards(JwtGuard)

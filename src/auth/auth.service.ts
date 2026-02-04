@@ -288,61 +288,86 @@ export class AuthService {
     return { message: 'A new verification code has been sent to your email.' };
   }
 
-  async saveNumber(phoneNumber){
-    const exists = await this.prisma.user.findUnique({ where: { phoneNumber } });
-    if (exists) throw new ForbiddenException('Number has already been used');
-    const code = randomInt(100000, 999999).toString();
-      await this.prisma.PhoneNumberVerification.create({
-      data: {
-        phoneNumber,
-        code,
-        attempts: 0,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min expiry
-        lastSentAt: new Date(),
-      },
-    });
-    await this.mailService.sendVerificationCode(phoneNumber, code);
-    return { message: 'Verification code sent to your Whatsapp or phone.' };
+  async saveNumber(userId: string, phoneNumber: string) {
+  const exists = await this.prisma.user.findFirst({
+    where: { phoneNumber },
+  });
+
+  if (exists) {
+    throw new ForbiddenException('Number has already been used');
   }
 
-  async verifyPhoneNumber(dto:verifyPhoneNumberDto){
-     const verification = await this.prisma.PhoneNumberVerification.findFirst({
-      where: {
-        phoneNumber,
-        code,
-        expiresAt: { gt: new Date() },
-      },
-    });
-     if (!verification) {
-      const record = await this.prisma.PhoneNumberVerification.findFirst({ where: { phoneNumber } });
-      if (record) {
-        if (record.attempts + 1 >= 5) {
-          await this.prisma.PhoneNumberVerification.delete({ where: { id: record.id } });
-          throw new ForbiddenException('Too many failed attempts. Please request a new code.');
-        }
+  const code = randomInt(100000, 999999).toString();
 
-        await this.prisma.PhoneNumberVerification.update({
+  await this.prisma.phoneNumberVerification.create({
+    data: {
+      userId,
+      phoneNumber,
+      code,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      lastSentAt: new Date(),
+      attempts: 0,
+    },
+  });
+
+  await this.mailService.sendVerificationCode(phoneNumber, code);
+
+  return { message: 'Verification code sent to your phone.' };
+}
+
+
+  async verifyPhoneNumber(dto: verifyPhoneNumberDto) {
+  const { phonenumber, code } = dto;
+
+  const verification = await this.prisma.phoneNumberVerification.findFirst({
+    where: {
+      phoneNumber: phonenumber,
+      code,
+      expiresAt: { gt: new Date() },
+    },
+  });
+
+  if (!verification) {
+    const record = await this.prisma.phoneNumberVerification.findFirst({
+      where: { phoneNumber: phonenumber },
+    });
+
+    if (record) {
+      if (record.attempts + 1 >= 5) {
+        await this.prisma.phoneNumberVerification.delete({
           where: { id: record.id },
-          data: { attempts: { increment: 1 } },
         });
+        throw new ForbiddenException(
+          'Too many failed attempts. Please request a new code.',
+        );
       }
-      throw new ForbiddenException('Invalid or expired code');
+
+      await this.prisma.phoneNumberVerification.update({
+        where: { id: record.id },
+        data: { attempts: { increment: 1 } },
+      });
     }
 
-    // Create user
-    const user = await this.prisma.user.update({
-      where: { id: verification.userId },
-      data: {
-        phoneNumber,
-      },
-    });
-
-    // Cleanup verification record
-    await this.prisma.PhoneNumberVerification.delete({ where: { id: verification.id } });
-
-    // Auto-login after signup (use your existing signToken)
-    return this.signToken(user.id, user.email, user.role);
+    throw new ForbiddenException('Invalid or expired code');
   }
+
+  //  Update existing user
+  const user = await this.prisma.user.update({
+    where: { id: verification.userId },
+    data: {
+      phoneNumber: verification.phoneNumber,
+      verified: true,
+    },
+  });
+
+  // Cleanup
+  await this.prisma.phoneNumberVerification.delete({
+    where: { id: verification.id },
+  });
+
+  return { message: 'Phone number verified successfully'};
+}
+
   
 
   

@@ -16,18 +16,21 @@ model EmailVerification {
   expiresAt    DateTime
   attempts     Int      @default(0)
   lastSentAt   DateTime @default(now())
+
   @@index([email])
 }
 
 model PhoneNumberVerification {
-  id           String   @id @default(uuid())
-  phoneNumber  String
-  code         String
-  passwordHash String
-  createdAt    DateTime @default(now())
-  expiresAt    DateTime
-  attempts     Int      @default(0)
-  lastSentAt   DateTime @default(now())
+  userId      String
+  id          String   @id @default(uuid())
+  phoneNumber String
+  code        String
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+  attempts    Int      @default(0)
+  lastSentAt  DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([phoneNumber])
 }
 
@@ -40,38 +43,37 @@ model PasswordReset {
   lastSentAt DateTime
 }
 
-
 model User {
-  id               String            @id @default(uuid())
-  email            String            @unique
-  hash             String
-  Firstname        String?
-  Lastname         String?
-  phone            String?
-  role             UserRole          @default(USER)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  Screenname       String?           @unique
-  bookings         Booking[]
-  favorites        Favorite[]
-  payments         Payment[]
-  rentals          Rental[]
-  tourRequests     TourRequest[]
-  appliesRequested appliesRequested[]   // FIXED: this is now many []
-  enscrolls        enscroll[]
-  verified  Boolean  @default(false)
-  phoneNumber String?
+  id                 String                    @id @default(uuid())
+  email              String                    @unique
+  hash               String
+  Firstname          String?
+  Lastname           String?
+  phone              String?
+  role               UserRole                  @default(USER)
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  Screenname         String?                   @unique
+  bookings           Booking[]
+  favorites          Favorite[]
+  payments           Payment[]
+  rentals            Rental[]
+  tourRequests       TourRequest[]
+  appliesRequested   appliesRequested[] // FIXED: this is now many []
+  enscrolls          enscroll[]
+  verified           Boolean                   @default(false)
+  phoneNumber        String?
+  phoneVerifications PhoneNumberVerification[]
 }
 
-
 model appliesRequested {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   userId      String
   propertyId  String
-  requestedAt DateTime  @default(now())
-  status      String    @default("PENDING")
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  requestedAt DateTime @default(now())
+  status      String   @default("PENDING")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@unique([userId, propertyId])
 }
@@ -142,7 +144,7 @@ model Booking {
   payments   Payment[]
 }
 
-model enscroll{
+model enscroll {
   id         String   @id @default(uuid())
   userId     String
   status     String   @default("Available")
@@ -152,7 +154,7 @@ model enscroll{
   address    String
   HostelName String
   price      Int
-  decription String 
+  decription String
 }
 
 model Rental {
