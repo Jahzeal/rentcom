@@ -26,6 +26,7 @@ export class CreatePropertyDto {
   address: string;
 
   @IsArray()
+  @IsString({ each: true })
   images: string[];
 
   @IsNumber()
@@ -67,6 +68,7 @@ export class EditPropertyDto {
   address: string;
 
   @IsArray()
+  @IsString({ each: true })
   images: string[];
 
   @IsNumber()
