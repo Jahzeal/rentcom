@@ -100,6 +100,7 @@ model Property {
   rentals          Rental[]
   tourRequests     TourRequest[]
   appliesRequested appliesRequested[]
+  shortlet         Shortlet?
 }
 
 model TourRequest {
@@ -155,6 +156,31 @@ model enscroll {
   HostelName String
   price      Int
   decription String
+}
+
+model Shortlet {
+  id          String       @id @default(uuid())
+  propertyId  String       @unique
+  property    Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  roomOptions RoomOption[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model RoomOption {
+  id          String   @id @default(uuid())
+  shortletId  String
+  shortlet    Shortlet @relation(fields: [shortletId], references: [id], onDelete: Cascade)
+  name        String
+  beds        Int
+  price       Int
+  description String
+  amenities   String[]
+  images      String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([shortletId])
 }
 
 model Rental {
