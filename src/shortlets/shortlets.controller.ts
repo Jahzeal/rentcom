@@ -84,4 +84,9 @@ export class ShortletsAdminController {
     deleteShortlet(@Param('id') id: string) {
         return this.shortletsService.deleteShortlet(id);
     }
+
+    @Post('sync')
+    syncShortlets() {
+        return this.shortletsService.forceSyncAllShortlets();
+    }
 }

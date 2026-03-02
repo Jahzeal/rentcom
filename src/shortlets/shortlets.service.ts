@@ -138,6 +138,10 @@ export class ShortletsService {
     // Admin Methods
     async createShortlet(dto: CreateShortletDto) {
         return this.prisma.$transaction(async (tx) => {
+            // Calculate initial summary data
+            const prices = dto.roomOptions.map(ro => ({ beds: ro.beds, price: ro.price }));
+            const minBeds = dto.roomOptions.length > 0 ? Math.min(...dto.roomOptions.map(ro => ro.beds)) : 0;
+
             // Create the property first
             const property = await tx.property.create({
                 data: {
@@ -149,8 +153,8 @@ export class ShortletsService {
                     coords: dto.coords as Prisma.InputJsonValue,
                     images: dto.images,
                     offers: dto.offers || '',
-                    price: [] as Prisma.InputJsonValue, // Empty for shortlets
-                    beds: 0, // Will be in room options
+                    price: prices as Prisma.InputJsonValue,
+                    beds: minBeds,
                     baths: 0, // Can be added later if needed
                     typerooms: 'Shortlet',
                     amenities: dto.amenities?.length
@@ -190,6 +194,26 @@ export class ShortletsService {
             });
 
             return shortlet;
+        });
+    }
+
+    private async syncPropertySummary(shortletId: string, tx: Prisma.TransactionClient = this.prisma as any) {
+        const shortlet = await tx.shortlet.findUnique({
+            where: { id: shortletId },
+            include: { roomOptions: true },
+        });
+
+        if (!shortlet) return;
+
+        const prices = shortlet.roomOptions.map(ro => ({ beds: ro.beds, price: ro.price }));
+        const minBeds = shortlet.roomOptions.length > 0 ? Math.min(...shortlet.roomOptions.map(ro => ro.beds)) : 0;
+
+        await tx.property.update({
+            where: { id: shortlet.propertyId },
+            data: {
+                price: prices as Prisma.InputJsonValue,
+                beds: minBeds,
+            },
         });
     }
 
@@ -238,7 +262,7 @@ export class ShortletsService {
             throw new NotFoundException('Shortlet not found');
         }
 
-        return this.prisma.roomOption.create({
+        const roomOption = await this.prisma.roomOption.create({
             data: {
                 shortletId,
                 name: dto.name,
@@ -249,6 +273,9 @@ export class ShortletsService {
                 images: dto.images,
             },
         });
+
+        await this.syncPropertySummary(shortletId);
+        return roomOption;
     }
 
     async updateRoomOption(
@@ -267,12 +294,15 @@ export class ShortletsService {
             throw new NotFoundException('Room option not found');
         }
 
-        return this.prisma.roomOption.update({
+        const updated = await this.prisma.roomOption.update({
             where: { id: roomId },
             data: {
                 ...dto,
             },
         });
+
+        await this.syncPropertySummary(shortletId);
+        return updated;
     }
 
     async deleteRoomOption(shortletId: string, roomId: string) {
@@ -290,6 +320,8 @@ export class ShortletsService {
         await this.prisma.roomOption.delete({
             where: { id: roomId },
         });
+
+        await this.syncPropertySummary(shortletId);
 
         return { message: 'Room option deleted successfully' };
     }
@@ -310,5 +342,17 @@ export class ShortletsService {
         });
 
         return { message: 'Shortlet deleted successfully' };
+    }
+
+    async forceSyncAllShortlets() {
+        const shortlets = await this.prisma.shortlet.findMany({
+            select: { id: true },
+        });
+
+        for (const shortlet of shortlets) {
+            await this.syncPropertySummary(shortlet.id);
+        }
+
+        return { message: `Synced ${shortlets.length} shortlets` };
     }
 }
