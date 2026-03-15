@@ -194,6 +194,8 @@ export class ShortletsService {
             });
 
             return shortlet;
+        }, {
+            timeout: 15000 // Increase timeout to 15 seconds to handle potentially slow complex creations
         });
     }
 

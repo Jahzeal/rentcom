@@ -54,6 +54,7 @@ export class AuthService {
         email,
         code,
         passwordHash: hash,
+        role: dto.role || UserRole.USER,
         attempts: 0,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min expiry
         lastSentAt: new Date(),
@@ -99,7 +100,7 @@ export class AuthService {
       data: {
         email,
         hash: verification.passwordHash,
-        role: UserRole.USER,
+        role: verification.role,
       },
     });
 
@@ -157,7 +158,6 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: {
         email: dto.email,
-        role: dto.role,
       },
     });
     if (!user) throw new ForbiddenException('Credentials incorrect');

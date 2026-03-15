@@ -28,6 +28,10 @@ export class AuthDto{
   @IsString()
   @IsOptional()
   phone:     string;
+
+  @IsString()
+  @IsOptional()
+  role?: UserRole;
 }
 export class AuthDtoSignin{
   @IsEmail()
@@ -67,6 +71,10 @@ export class VerifySignupDto {
   @IsString()
   @IsNotEmpty()
   code: string;
+
+  @IsString()
+  @IsOptional()
+  role?: UserRole;
 }
 
 export class verifyPhoneNumberDto{

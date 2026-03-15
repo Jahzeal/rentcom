@@ -40,7 +40,7 @@ export class ShortletsController {
 
 @Controller('admin/shortlets')
 @UseGuards(JwtGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles('ADMIN', 'AGENT')
 export class ShortletsAdminController {
     constructor(private shortletsService: ShortletsService) { }
 
