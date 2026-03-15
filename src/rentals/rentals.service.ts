@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { FilterPropertyDto } from './Dto/rentals.dto';
-import { Prisma, Property } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class RentalsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * Public method to fetch rentals.
@@ -54,14 +54,18 @@ export class RentalsService {
     };
 
     // Fetch paginated properties
-    let properties: Property[] = await this.prisma.property.findMany({
+    let properties: any[] = await this.prisma.property.findMany({
       where: whereClause,
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip: (page - 1) * limit,
       include: {
         amenities: true,
-        // rentals: true,
+        shortlet: {
+          include: {
+            roomOptions: true,
+          },
+        },
       },
     });
 

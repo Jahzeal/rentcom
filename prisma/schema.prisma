@@ -12,6 +12,7 @@ model EmailVerification {
   email        String
   code         String
   passwordHash String
+  role         UserRole @default(USER)
   createdAt    DateTime @default(now())
   expiresAt    DateTime
   attempts     Int      @default(0)
@@ -214,6 +215,7 @@ model Payment {
 
 enum UserRole {
   USER
+  AGENT
   ADMIN
 }
 

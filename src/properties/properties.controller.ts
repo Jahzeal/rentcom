@@ -19,7 +19,7 @@ export class PropertiesController {
   constructor(private propertyService: PropertiesService) {}
 
   @Post('createproperties')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'AGENT')
   createProperty(@Body() dto: CreatePropertyDto) {
     return this.propertyService.createProperty(dto);
   }
