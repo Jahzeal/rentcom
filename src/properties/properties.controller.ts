@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Post,
   UseGuards,
   Patch,
@@ -12,6 +13,8 @@ import { PropertiesService } from './properties.service';
 import { Roles } from 'src/auth/decorator/roles.decorator';
 import { CreatePropertyDto } from './dto/property.dto';
 import { EditPropertyDto } from './dto/property.dto';
+import { GetUser } from 'src/auth/decorator/get-user.decorator';
+import { GetId } from 'src/admin/decorators/getid.decorator';
 
 @Controller('admin')
 @UseGuards(JwtGuard, RolesGuard)
@@ -20,8 +23,14 @@ export class PropertiesController {
 
   @Post('createproperties')
   @Roles('ADMIN', 'AGENT')
-  createProperty(@Body() dto: CreatePropertyDto) {
-    return this.propertyService.createProperty(dto);
+  createProperty(@GetUser('id') userId: string, @Body() dto: CreatePropertyDto) {
+    return this.propertyService.createProperty(userId, dto);
+  }
+
+  @Get('agent-properties/:id')
+  @Roles('ADMIN', 'AGENT')
+  getAgentProperties(@GetId('id') agentId: string) {
+    return this.propertyService.getPropertiesByAgent(agentId);
   }
 
   @Patch('editProperty/:id')

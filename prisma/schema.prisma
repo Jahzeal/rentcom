@@ -65,6 +65,7 @@ model User {
   verified           Boolean                   @default(false)
   phoneNumber        String?
   phoneVerifications PhoneNumberVerification[]
+  properties         Property[]
 }
 
 model appliesRequested {
@@ -102,6 +103,8 @@ model Property {
   tourRequests     TourRequest[]
   appliesRequested appliesRequested[]
   shortlet         Shortlet?
+  userId           String?
+  user             User?              @relation(fields: [userId], references: [id])
 }
 
 model TourRequest {

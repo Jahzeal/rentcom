@@ -8,15 +8,48 @@ import { editUserDto } from '../users/dto/users.dto';
 export class AdminService {
   constructor(private prisma: PrismaService) {}
   async getStats() {
-    const totalUsers = await this.prisma.user.count();
-    const totalProperties = await this.prisma.property.count();
-    const rentalCount = await this.prisma.rental.count();
-    const bookingCount = await this.prisma.booking.count();
-    return {
+    const [
       totalUsers,
+      totalProperties,
       rentalCount,
       bookingCount,
+      tourStats,
+      propertyTypeStats,
+    ] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.property.count(),
+      this.prisma.rental.count(),
+      this.prisma.booking.count(),
+      this.prisma.tourRequest.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+      }),
+      this.prisma.property.groupBy({
+        by: ['type'],
+        _count: { _all: true },
+      }),
+    ]);
+
+    // Format metrics for the dashboard
+    const tours = {
+      total: tourStats.reduce((acc, curr) => acc + curr._count._all, 0),
+      done: tourStats.find((s) => s.status === 'COMPLETED')?._count._all || 0,
+      pending: tourStats.find((s) => s.status === 'PENDING')?._count._all || 0,
+    };
+
+    const propertyCounts = {
+      shortlets: propertyTypeStats.find((s) => s.type === 'ShortLET')?._count._all || 0,
+      hostels: propertyTypeStats.find((s) => s.type === 'Hostels')?._count._all || 0,
+      houses: propertyTypeStats.find((s) => s.type === 'APARTMENT')?._count._all || 0,
+    };
+
+    return {
+      totalUsers,
       totalProperties,
+      rentalCount,
+      bookingCount,
+      tours,
+      propertyCounts,
     };
   }
 
