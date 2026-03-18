@@ -7,9 +7,10 @@ import { Prisma } from '@prisma/client';
 @Injectable()
 export class PropertiesService {
   constructor(private prisma: PrismaService) {}
-  async createProperty(dto: CreatePropertyDto) {
+  async createProperty(userId: string, dto: CreatePropertyDto) {
     return this.prisma.property.create({
       data: {
+        userId,
         title: dto.title,
         description: dto.description,
         type: dto.type,
@@ -36,7 +37,17 @@ export class PropertiesService {
     });
   }
 
-  async editProperty(propertyId: string, dto: EditPropertyDto) {
+  async editProperty(user: any, propertyId: string, dto: EditPropertyDto) {
+    // If agent, ensure they own the property
+    if (user.role === 'AGENT') {
+      const property = await this.prisma.property.findFirst({
+        where: { id: propertyId, userId: user.id },
+      });
+      if (!property) {
+        throw new NotFoundException('Property not found or access denied');
+      }
+    }
+
     const { amenities, ...rest } = dto;
 
     const data: Prisma.PropertyUpdateInput = {
@@ -63,7 +74,20 @@ export class PropertiesService {
       if (error.code?.toLowerCase() === 'p2025') {
         throw new NotFoundException('Property not found');
       }
-      throw error;
     }
+  }
+
+  async getPropertiesByAgent(agentId: string) {
+    return this.prisma.property.findMany({
+      where: { userId: agentId },
+      include: {
+        amenities: true,
+        shortlet: {
+          include: {
+            roomOptions: true,
+          },
+        },
+      },
+    });
   }
 }

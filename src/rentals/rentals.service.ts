@@ -51,6 +51,7 @@ export class RentalsService {
       ...(dto.propertyType && { type: dto.propertyType }),
       ...(dto.roomType && { typerooms: dto.roomType }),
       ...(orFilters.length > 0 && { OR: orFilters }),
+      ...(dto.userId && { userId: dto.userId }),
     };
 
     // Fetch paginated properties

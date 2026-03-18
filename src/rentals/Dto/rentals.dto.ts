@@ -111,5 +111,10 @@ export class FilterPropertyDto {
   @IsNumber()
   @Min(1)
   @Max(50)
+  @IsOptional()
   limit?: number = 12;
+
+  @IsOptional()
+  @IsString()
+  userId?: string;
 }
