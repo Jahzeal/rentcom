@@ -16,7 +16,7 @@ import { editUserDto } from 'src/users/dto/users.dto';
 import { GetId } from './decorators/getid.decorator';
 
 @Controller('admin')
-@Roles('ADMIN')
+@Roles('ADMIN', 'AGENT')
 @UseGuards(JwtGuard, RolesGuard) // attach the RolesGuard to all routes in this controller
 export class AdminController {
   constructor(private adminService: AdminService) {}
@@ -32,28 +32,33 @@ export class AdminController {
   }
 
   @Get('users')
+  @Roles('ADMIN')
   getAllUsers() {
     return this.adminService.getAllUsers();
   }
 
   @Get('getAllProperties')
+  @Roles('ADMIN')
   getAllProperties() {
     return this.adminService.getAllProperties();
   }
 
   @Delete('deleteproperty/:id')
-  deleteProperty(@GetId('id') propertyId: string) {
-    console.log(`property with id ${propertyId} deleted`);
-    return this.adminService.deleteProperty(propertyId);
+  @Roles('ADMIN', 'AGENT')
+  deleteProperty(@GetUser() user: User, @GetId('id') propertyId: string) {
+    console.log(`property with id ${propertyId} deleted by user ${user.id}`);
+    return this.adminService.deleteProperty(user, propertyId);
   }
 
   @Delete('deleteUser/:id')
+  @Roles('ADMIN')
   deleteUser(@GetId('id') userId: string) {
     console.log(`user with id ${userId} deleted`);
     return this.adminService.deleteUser(userId);
   }
 
   @Patch('update-user/:id')
+  @Roles('ADMIN')
   async editUser(@GetId('id') userId: string, @Body() dto: editUserDto) {
     return this.adminService.editUser(userId, dto);
   }

@@ -37,7 +37,17 @@ export class PropertiesService {
     });
   }
 
-  async editProperty(propertyId: string, dto: EditPropertyDto) {
+  async editProperty(user: any, propertyId: string, dto: EditPropertyDto) {
+    // If agent, ensure they own the property
+    if (user.role === 'AGENT') {
+      const property = await this.prisma.property.findFirst({
+        where: { id: propertyId, userId: user.id },
+      });
+      if (!property) {
+        throw new NotFoundException('Property not found or access denied');
+      }
+    }
+
     const { amenities, ...rest } = dto;
 
     const data: Prisma.PropertyUpdateInput = {

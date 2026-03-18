@@ -65,8 +65,18 @@ export class AdminService {
     });
   }
 
-  async deleteProperty(propetyId: string) {
+  async deleteProperty(user: any, propetyId: string) {
     try {
+      // If agent, ensure they own the property
+      if (user.role === 'AGENT') {
+        const property = await this.prisma.property.findFirst({
+          where: { id: propetyId, userId: user.id },
+        });
+        if (!property) {
+          throw new NotFoundException('Property not found or access denied');
+        }
+      }
+
       return this.prisma.property.delete({
         where: { id: propetyId },
       });
