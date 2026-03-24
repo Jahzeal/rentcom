@@ -7,7 +7,10 @@ import { editUserDto } from '../users/dto/users.dto';
 @Injectable()
 export class AdminService {
   constructor(private prisma: PrismaService) {}
-  async getStats() {
+  async getStats(agentId?: string) {
+    const propertyFilter = agentId ? { userId: agentId } : {};
+    const relatedFilter = agentId ? { property: { userId: agentId } } : {};
+
     const [
       totalUsers,
       totalProperties,
@@ -15,19 +18,29 @@ export class AdminService {
       bookingCount,
       tourStats,
       propertyTypeStats,
+      agentCustomerCount,
     ] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.property.count(),
-      this.prisma.rental.count(),
-      this.prisma.booking.count(),
+      agentId ? Promise.resolve(0) : this.prisma.user.count(),
+      this.prisma.property.count({ where: propertyFilter }),
+      this.prisma.rental.count({ where: relatedFilter }),
+      this.prisma.booking.count({ where: relatedFilter }),
       this.prisma.tourRequest.groupBy({
         by: ['status'],
+        where: relatedFilter,
         _count: { _all: true },
       }),
       this.prisma.property.groupBy({
         by: ['type'],
+        where: propertyFilter,
         _count: { _all: true },
       }),
+      agentId
+        ? this.prisma.tourRequest.groupBy({
+            by: ['userId'],
+            where: relatedFilter,
+            _count: { _all: true },
+          })
+        : Promise.resolve([]),
     ]);
 
     // Format metrics for the dashboard
@@ -44,7 +57,7 @@ export class AdminService {
     };
 
     return {
-      totalUsers,
+      totalUsers: agentId ? agentCustomerCount.length : totalUsers,
       totalProperties,
       rentalCount,
       bookingCount,

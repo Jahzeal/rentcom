@@ -27,8 +27,9 @@ export class AdminController {
   }
 
   @Get('stats')
-  getAdminStats() {
-    return this.adminService.getStats();
+  getAdminStats(@GetUser() user: User) {
+    const agentId = user.role === 'AGENT' ? user.id : undefined;
+    return this.adminService.getStats(agentId);
   }
 
   @Get('users')
