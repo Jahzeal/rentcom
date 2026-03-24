@@ -63,7 +63,7 @@ export class ShortletsService {
             description: shortlet.property.description,
             location: shortlet.property.location,
             address: shortlet.property.address,
-            images: shortlet.property.images,
+            images: shortlet.images.length > 0 ? shortlet.images : shortlet.property.images,
             coords: shortlet.property.coords,
             offers: shortlet.property.offers,
             amenities: shortlet.property.amenities.map((a: any) => a.name),
@@ -104,28 +104,7 @@ export class ShortletsService {
         ]);
 
         return {
-            data: shortlets.map((shortlet) => ({
-                id: shortlet.id,
-                title: shortlet.property.title,
-                description: shortlet.property.description,
-                location: shortlet.property.location,
-                address: shortlet.property.address,
-                images: shortlet.property.images,
-                coords: shortlet.property.coords,
-                offers: shortlet.property.offers,
-                amenities: shortlet.property.amenities.map((a) => a.name),
-                roomOptions: shortlet.roomOptions.map((ro) => ({
-                    id: ro.id,
-                    name: ro.name,
-                    beds: ro.beds,
-                    price: ro.price,
-                    description: ro.description,
-                    amenities: ro.amenities,
-                    images: ro.images,
-                })),
-                createdAt: shortlet.createdAt,
-                updatedAt: shortlet.updatedAt,
-            })),
+            data: shortlets.map((shortlet) => this.transformShortletResponse(shortlet)),
             meta: {
                 total,
                 page,
@@ -172,6 +151,7 @@ export class ShortletsService {
             const shortlet = await tx.shortlet.create({
                 data: {
                     propertyId: property.id,
+                    images: dto.images,
                     roomOptions: {
                         create: dto.roomOptions.map((ro) => ({
                             name: ro.name,
@@ -236,7 +216,9 @@ export class ShortletsService {
         if (dto.address) propertyData.address = dto.address;
         if (dto.location) propertyData.location = dto.location;
         if (dto.coords) propertyData.coords = dto.coords as Prisma.InputJsonValue;
-        if (dto.images) propertyData.images = dto.images;
+        if (dto.images) {
+            propertyData.images = dto.images;
+        }
         if (dto.offers !== undefined) propertyData.offers = dto.offers;
         if (dto.amenities?.length) {
             propertyData.amenities = {
@@ -251,6 +233,13 @@ export class ShortletsService {
             where: { id: shortlet.propertyId },
             data: propertyData,
         });
+
+        if (dto.images) {
+            await this.prisma.shortlet.update({
+                where: { id: shortlet.id },
+                data: { images: dto.images },
+            });
+        }
 
         return this.getShortletById(id);
     }

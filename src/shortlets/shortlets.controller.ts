@@ -27,6 +27,14 @@ export class ShortletsController {
     // Public Endpoints
 
 
+    @Get()
+    getAllShortlets(@Query('page') page?: number, @Query('limit') limit?: number) {
+        return this.shortletsService.getAllShortlets(
+            page ? Number(page) : undefined,
+            limit ? Number(limit) : undefined,
+        );
+    }
+
     @Get('property/:propertyId')
     getShortletByPropertyId(@Param('propertyId') propertyId: string) {
         return this.shortletsService.getShortletByPropertyId(propertyId);
