@@ -16,6 +16,8 @@ import { AuthModule } from './auth/auth.module';
 // import { EnscrollController } from './enscroll/enscroll.controller';
 import { EnscrollModule } from './enscroll/enscroll.module';
 import { ShortletsModule } from './shortlets/shortlets.module';
+import { NotificationsModule } from './notifications/notifications.module';
+
 @Module({
   imports: [
     AuthModule,
@@ -31,6 +33,7 @@ import { ShortletsModule } from './shortlets/shortlets.module';
     PrismaModule,
     EnscrollModule,
     ShortletsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

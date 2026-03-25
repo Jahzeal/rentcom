@@ -17,6 +17,7 @@ export class AdminService {
       rentalCount,
       bookingCount,
       tourStats,
+      bookingStats,
       propertyTypeStats,
       agentCustomerCount,
     ] = await Promise.all([
@@ -25,6 +26,11 @@ export class AdminService {
       this.prisma.rental.count({ where: relatedFilter }),
       this.prisma.booking.count({ where: relatedFilter }),
       this.prisma.tourRequest.groupBy({
+        by: ['status'],
+        where: relatedFilter,
+        _count: { _all: true },
+      }),
+      this.prisma.booking.groupBy({
         by: ['status'],
         where: relatedFilter,
         _count: { _all: true },
@@ -50,6 +56,12 @@ export class AdminService {
       pending: tourStats.find((s) => s.status === 'PENDING')?._count._all || 0,
     };
 
+    const bookings = {
+      total: bookingStats.reduce((acc, curr) => acc + curr._count._all, 0),
+      confirmed: bookingStats.find((s) => s.status === 'CONFIRMED')?._count._all || 0,
+      pending: bookingStats.find((s) => s.status === 'PENDING')?._count._all || 0,
+    };
+
     const propertyCounts = {
       shortlets: propertyTypeStats.find((s) => s.type === 'ShortLET')?._count._all || 0,
       hostels: propertyTypeStats.find((s) => s.type === 'Hostels')?._count._all || 0,
@@ -62,6 +74,7 @@ export class AdminService {
       rentalCount,
       bookingCount,
       tours,
+      bookings,
       propertyCounts,
     };
   }
