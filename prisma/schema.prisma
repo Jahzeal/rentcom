@@ -142,6 +142,7 @@ model Booking {
   startDate  DateTime
   endDate    DateTime
   status     BookingStatus @default(PENDING)
+  notes      String?
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
   property   Property      @relation(fields: [propertyId], references: [id])
