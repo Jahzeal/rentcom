@@ -47,6 +47,7 @@ export class BookingsService {
         startDate: start,
         endDate: end,
         status: 'PENDING',
+        notes: dto.notes,
       },
       include: {
         property: true,
