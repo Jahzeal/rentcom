@@ -115,7 +115,7 @@ export class ShortletsService {
     }
 
     // Admin Methods
-    async createShortlet(dto: CreateShortletDto) {
+    async createShortlet(userId: string, dto: CreateShortletDto) {
         return this.prisma.$transaction(async (tx) => {
             // Calculate initial summary data
             const prices = dto.roomOptions.map(ro => ({ beds: ro.beds, price: ro.price }));
@@ -124,6 +124,7 @@ export class ShortletsService {
             // Create the property first
             const property = await tx.property.create({
                 data: {
+                    userId,
                     title: dto.title,
                     description: dto.description,
                     type: PropertyType.ShortLET,

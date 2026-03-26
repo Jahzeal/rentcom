@@ -144,4 +144,52 @@ export class AdminService {
       throw error;
     }
   }
+
+  async getNotifications(user: any) {
+    const relatedFilter = user.role === 'AGENT' ? { property: { userId: user.id } } : {};
+
+    const [bookings, tourRequests] = await Promise.all([
+      this.prisma.booking.findMany({
+        where: relatedFilter,
+        include: {
+          user: true,
+          property: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }),
+      this.prisma.tourRequest.findMany({
+        where: relatedFilter,
+        include: {
+          user: true,
+          property: true,
+        },
+        orderBy: { requestedAt: 'desc' },
+        take: 10,
+      }),
+    ]);
+
+    const notifications = [
+      ...bookings.map((b) => ({
+        id: `booking-${b.id}`,
+        title: b.status === 'CONFIRMED' ? 'Payment Confirmed' : 'New Booking Request',
+        message: `${b.user.Firstname} ${b.user.Lastname} booked ${b.property.title}. Status: ${b.status}`,
+        createdAt: b.createdAt,
+        read: b.status === 'CONFIRMED',
+        type: b.status === 'CONFIRMED' ? 'info' : 'alert',
+      })),
+      ...tourRequests.map((t) => ({
+        id: `tour-${t.id}`,
+        title: 'New Tour Request',
+        message: `${t.user.Firstname} ${t.user.Lastname} requested a tour for ${t.property.title}. Status: ${t.status}`,
+        createdAt: t.requestedAt,
+        read: t.status === 'COMPLETED',
+        type: 'alert',
+      })),
+    ];
+
+    return notifications.sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
+  }
 }

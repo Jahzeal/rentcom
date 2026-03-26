@@ -73,6 +73,7 @@ export class PaymentsService {
       endDate: booking.endDate,
       amount: payment.amount,
       reference: reference,
+      notes: booking.notes,
     });
 
     return {
