@@ -58,6 +58,12 @@ export class AdminController {
     return this.adminService.deleteUser(userId);
   }
 
+  @Get('notifications')
+  @Roles('ADMIN', 'AGENT')
+  async getNotifications(@GetUser() user: User) {
+    return this.adminService.getNotifications(user);
+  }
+
   @Patch('update-user/:id')
   @Roles('ADMIN')
   async editUser(@GetId('id') userId: string, @Body() dto: editUserDto) {

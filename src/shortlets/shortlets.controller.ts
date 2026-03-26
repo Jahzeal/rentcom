@@ -19,6 +19,7 @@ import {
 import { JwtGuard } from 'src/auth/guard';
 import { RolesGuard } from 'src/auth/guard/roles.guard';
 import { Roles } from 'src/auth/decorator/roles.decorator';
+import { GetUser } from 'src/auth/decorator/get-user.decorator';
 
 @Controller('api/v1/shortlets')
 export class ShortletsController {
@@ -54,8 +55,11 @@ export class ShortletsAdminController {
 
     // Admin Endpoints
     @Post()
-    createShortlet(@Body() dto: CreateShortletDto) {
-        return this.shortletsService.createShortlet(dto);
+    createShortlet(
+        @GetUser('id') userId: string,
+        @Body() dto: CreateShortletDto,
+    ) {
+        return this.shortletsService.createShortlet(userId, dto);
     }
 
     @Patch(':id')
