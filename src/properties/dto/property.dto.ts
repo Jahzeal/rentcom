@@ -48,6 +48,7 @@ export class CreatePropertyDto {
   location: string;
 
   @IsObject()
+  @IsOptional()
   coords: any;
 }
 
@@ -84,6 +85,7 @@ export class EditPropertyDto {
   amenities: string[];
 
   @IsObject()
+  @IsOptional()
   coords: any;
 
   @IsString()

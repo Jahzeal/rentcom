@@ -145,6 +145,18 @@ export class AdminService {
     }
   }
 
+  private getUserDisplayName(user: any): string {
+    const firstName = user.Firstname?.trim();
+    const lastName = user.Lastname?.trim();
+
+    if (firstName && lastName) return `${firstName} ${lastName}`;
+    if (firstName) return firstName;
+    if (lastName) return lastName;
+    if (user.Screenname?.trim()) return user.Screenname.trim();
+
+    return user.email.split('@')[0];
+  }
+
   async getNotifications(user: any) {
     const relatedFilter = user.role === 'AGENT' ? { property: { userId: user.id } } : {};
 
@@ -173,7 +185,7 @@ export class AdminService {
       ...bookings.map((b) => ({
         id: `booking-${b.id}`,
         title: b.status === 'CONFIRMED' ? 'Payment Confirmed' : 'New Booking Request',
-        message: `${b.user.Firstname} ${b.user.Lastname} booked ${b.property.title}. Status: ${b.status}`,
+        message: `${this.getUserDisplayName(b.user)} booked ${b.property.title}. Status: ${b.status}`,
         createdAt: b.createdAt,
         read: b.status === 'CONFIRMED',
         type: b.status === 'CONFIRMED' ? 'info' : 'alert',
@@ -181,7 +193,7 @@ export class AdminService {
       ...tourRequests.map((t) => ({
         id: `tour-${t.id}`,
         title: 'New Tour Request',
-        message: `${t.user.Firstname} ${t.user.Lastname} requested a tour for ${t.property.title}. Status: ${t.status}`,
+        message: `${this.getUserDisplayName(t.user)} requested a tour for ${t.property.title}. Status: ${t.status}`,
         createdAt: t.requestedAt,
         read: t.status === 'COMPLETED',
         type: 'alert',

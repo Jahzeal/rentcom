@@ -86,6 +86,7 @@ export class BookingsService {
       include: {
         property: true,
         user: true,
+        payments: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -98,6 +99,7 @@ export class BookingsService {
       include: {
         property: true,
         user: true,
+        payments: true,
       },
       orderBy: {
         createdAt: 'desc',

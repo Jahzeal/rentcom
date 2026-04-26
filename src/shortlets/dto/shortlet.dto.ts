@@ -73,6 +73,7 @@ export class CreateShortletDto {
     location: string;
 
     @IsObject()
+    @IsOptional()
     coords: any;
 
     @IsArray()

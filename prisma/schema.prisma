@@ -66,6 +66,19 @@ model User {
   phoneNumber        String?
   phoneVerifications PhoneNumberVerification[]
   properties         Property[]
+  pushSubscriptions  PushSubscription[]
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model appliesRequested {
@@ -92,7 +105,7 @@ model Property {
   baths            Int
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
-  coords           Json
+  coords           Json?
   location         String
   offers           String
   price            Json
