@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { RoomStatus, BookingStatus } from '@prisma/client';
 
 @Injectable()
+// Forced update to ensure git picks up the fix for HotelRoom images
 export class ManagementService {
   constructor(private prisma: PrismaService) {}
 
