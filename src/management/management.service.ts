@@ -77,10 +77,42 @@ export class ManagementService {
   }
 
   async getRoomsByAgent(agentId: string) {
-    return this.prisma.hotelRoom.findMany({
+    const hotelRooms = await this.prisma.hotelRoom.findMany({
       where: { property: { userId: agentId } },
-      include: { property: { select: { title: true } } },
+      include: { 
+        property: { select: { title: true } },
+        bookings: {
+          where: { 
+            status: BookingStatus.CONFIRMED,
+            endDate: { gte: new Date() }
+          },
+          select: { startDate: true, endDate: true, status: true }
+        }
+      },
     });
+
+    const shortlets = await this.prisma.shortlet.findMany({
+      where: { property: { userId: agentId } },
+      include: { 
+        property: { select: { title: true, id: true } },
+        roomOptions: true
+      }
+    });
+
+    // Map shortlet room options to match the dashboard's expected room format
+    const shortletRooms = shortlets.flatMap(s => s.roomOptions.map(ro => ({
+      id: ro.id, // Using room option id
+      propertyId: s.propertyId,
+      roomNumber: ro.name, // Mapping name to number
+      roomName: s.property.title,
+      category: "Shortlet",
+      floor: "N/A",
+      price: ro.price,
+      status: "AVAILABLE", // Default status for shortlets for now
+      bookings: [] // TODO: Integrate shortlet bookings if they are room-specific
+    })));
+
+    return [...hotelRooms, ...shortletRooms];
   }
 
   async updateRoomStatus(agentId: string, roomId: string, dto: UpdateRoomStatusDto) {
@@ -97,30 +129,51 @@ export class ManagementService {
 
   // --- Transactions ---
   async processWalkIn(staffId: string, dto: ProcessWalkInDto) {
-    const room = await this.prisma.hotelRoom.findUnique({
+    // 1. Find the room (either HotelRoom or RoomOption)
+    let hotelRoom = await this.prisma.hotelRoom.findUnique({
       where: { id: dto.hotelRoomId },
       include: { property: true },
     });
-    if (!room) throw new NotFoundException('Room not found');
-    if (room.status !== RoomStatus.AVAILABLE) throw new ConflictException('Room is not available');
+
+    let propertyId: string;
+    let ownerId: string;
+    let isHotelRoom = true;
+
+    if (hotelRoom) {
+      if (hotelRoom.status !== RoomStatus.AVAILABLE) throw new ConflictException('Room is not available');
+      propertyId = hotelRoom.propertyId;
+      ownerId = hotelRoom.property.userId || '';
+    } else {
+      // Check if it's a Shortlet Room Option
+      const roomOption = await this.prisma.roomOption.findUnique({
+        where: { id: dto.hotelRoomId },
+        include: { shortlet: { include: { property: true } } }
+      });
+
+      if (!roomOption) throw new NotFoundException('Room not found');
+      
+      propertyId = roomOption.shortlet.propertyId;
+      ownerId = roomOption.shortlet.property.userId || '';
+      isHotelRoom = false;
+    }
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Create a "Shadow User" or just record details in booking notes for now
-      // Better: Create a booking record tagged as walk-in
+      // 1. Create a booking record tagged as walk-in
       const booking = await tx.booking.create({
         data: {
-          propertyId: room.propertyId,
-          userId: room.property.userId || '', // Tie to owner for now or create a temp user
+          propertyId,
+          userId: ownerId, 
           startDate: new Date(dto.startDate),
           endDate: new Date(dto.endDate),
           status: BookingStatus.CONFIRMED,
           notes: `Walk-in Guest: ${dto.customerName} (${dto.customerPhone})`,
           isWalkIn: true,
           processedByStaffId: staffId,
-          hotelRoomId: room.id,
+          hotelRoomId: isHotelRoom ? dto.hotelRoomId : null,
+          // roomOptionId: !isHotelRoom ? dto.hotelRoomId : null, // If we add this field to schema
           payments: {
             create: {
-              userId: room.property.userId || '',
+              userId: ownerId,
               amount: dto.amountPaid,
               status: 'SUCCESS',
               reference: `WALKIN-${Date.now()}`,
@@ -129,11 +182,13 @@ export class ManagementService {
         },
       });
 
-      // 2. Lock the room
-      await tx.hotelRoom.update({
-        where: { id: room.id },
-        data: { status: RoomStatus.OCCUPIED },
-      });
+      // 2. Lock the room if it's a hotel room
+      if (isHotelRoom) {
+        await tx.hotelRoom.update({
+          where: { id: dto.hotelRoomId },
+          data: { status: RoomStatus.OCCUPIED },
+        });
+      }
 
       return booking;
     });
