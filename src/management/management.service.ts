@@ -2,7 +2,6 @@ import { Injectable, NotFoundException, UnauthorizedException, ConflictException
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateStaffDto, CreateHotelRoomDto, UpdateRoomStatusDto, ProcessWalkInDto } from './dto/management.dto';
 import * as bcrypt from 'bcrypt';
-import { Roles } from '../auth/decorator/roles.decorator';
 import { RoomStatus, BookingStatus } from '@prisma/client';
 
 @Injectable()
