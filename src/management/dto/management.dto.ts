@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsEnum, IsOptional, IsInt, IsBoolean } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsOptional, IsInt, IsBoolean, IsArray } from 'class-validator';
+// Forced update to ensure git picks up the fix for IsArray
 import { StaffRole, RoomStatus } from '@prisma/client';
 
 export class CreateStaffDto {
