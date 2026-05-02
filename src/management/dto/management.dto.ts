@@ -21,8 +21,8 @@ export class CreateStaffDto {
 
 export class CreateHotelRoomDto {
   @IsString()
-  @IsNotEmpty()
-  propertyId: string;
+  @IsOptional()
+  propertyId?: string;
 
   @IsString()
   @IsNotEmpty()
