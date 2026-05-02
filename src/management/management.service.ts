@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, UnauthorizedException, ConflictException
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateStaffDto, CreateHotelRoomDto, UpdateRoomStatusDto, ProcessWalkInDto } from './dto/management.dto';
 import * as bcrypt from 'bcrypt';
+import { Roles } from '../auth/decorator/roles.decorator';
 import { RoomStatus, BookingStatus } from '@prisma/client';
 
 @Injectable()
@@ -62,6 +63,7 @@ export class ManagementService {
           baths: 1,
           typerooms: dto.category,
           images: [], // Images would be handled by a separate upload logic or added here
+          offers: "",
         },
       });
 
