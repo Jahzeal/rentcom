@@ -57,20 +57,33 @@ export class ManagementService {
           type: 'HOTEL_ROOM',
           address: 'Hotel Location', // In a real scenario, this would come from the Hotel's profile
           location: 'Hotel Area',
-          price: { amount: dto.price, currency: 'NGN' } as any,
-          beds: 1, // Default for a single room
+          price: dto.price,
+          beds: 1, 
           baths: 1,
           typerooms: dto.category,
-          images: [], // Images would be handled by a separate upload logic or added here
+          images: dto.images || [], 
           offers: "",
+          amenities: dto.amenities ? {
+            connectOrCreate: dto.amenities.split(',').map(name => name.trim()).filter(Boolean).map(name => ({
+              where: { name },
+              create: { name }
+            }))
+          } : undefined
         },
       });
 
       // 2. Create the detailed HotelRoom record
       return tx.hotelRoom.create({
         data: {
-          ...dto,
-          propertyId: property.id, // Link to the newly created property
+          propertyId: property.id,
+          roomNumber: dto.roomNumber,
+          roomName: dto.roomName,
+          category: dto.category,
+          floor: dto.floor,
+          price: dto.price,
+          description: dto.description,
+          amenities: dto.amenities,
+          images: dto.images || [],
         },
       });
     });

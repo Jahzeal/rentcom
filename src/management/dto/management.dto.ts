@@ -51,6 +51,11 @@ export class CreateHotelRoomDto {
   @IsString()
   @IsOptional()
   amenities?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  images?: string[];
 }
 
 export class UpdateRoomStatusDto {
