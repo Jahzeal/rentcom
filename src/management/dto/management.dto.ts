@@ -1,0 +1,85 @@
+import { IsString, IsNotEmpty, IsEnum, IsOptional, IsInt, IsBoolean } from 'class-validator';
+import { StaffRole, RoomStatus } from '@prisma/client';
+
+export class CreateStaffDto {
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  username: string;
+
+  @IsString()
+  @IsNotEmpty()
+  passwordHash: string;
+
+  @IsEnum(StaffRole)
+  @IsOptional()
+  role?: StaffRole;
+}
+
+export class CreateHotelRoomDto {
+  @IsString()
+  @IsNotEmpty()
+  propertyId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  roomNumber: string;
+
+  @IsString()
+  @IsOptional()
+  roomName?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  category: string;
+
+  @IsString()
+  @IsOptional()
+  floor?: string;
+
+  @IsInt()
+  @IsNotEmpty()
+  price: number;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsString()
+  @IsOptional()
+  amenities?: string;
+}
+
+export class UpdateRoomStatusDto {
+  @IsEnum(RoomStatus)
+  status: RoomStatus;
+}
+
+export class ProcessWalkInDto {
+  @IsString()
+  @IsNotEmpty()
+  hotelRoomId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  customerName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  customerPhone: string;
+
+  @IsInt()
+  @IsNotEmpty()
+  amountPaid: number;
+
+  @IsString()
+  @IsNotEmpty()
+  startDate: string;
+
+  @IsString()
+  @IsNotEmpty()
+  endDate: string;
+}

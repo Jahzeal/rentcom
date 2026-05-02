@@ -67,6 +67,7 @@ model User {
   phoneVerifications PhoneNumberVerification[]
   properties         Property[]
   pushSubscriptions  PushSubscription[]
+  staffAccounts      ManagementStaff[]         @relation("AgentToStaff")
 }
 
 model PushSubscription {
@@ -118,6 +119,7 @@ model Property {
   shortlet         Shortlet?
   userId           String?
   user             User?              @relation(fields: [userId], references: [id])
+  hotelRooms       HotelRoom[]
 }
 
 model TourRequest {
@@ -161,6 +163,12 @@ model Booking {
   property   Property      @relation(fields: [propertyId], references: [id])
   user       User          @relation(fields: [userId], references: [id])
   payments   Payment[]
+
+  isWalkIn          Boolean @default(false)
+  processedByStaffId String?
+  staff             ManagementStaff? @relation("StaffToBooking", fields: [processedByStaffId], references: [id])
+  hotelRoomId       String?
+  hotelRoom         HotelRoom? @relation("RoomToBooking", fields: [hotelRoomId], references: [id])
 }
 
 model enscroll {
@@ -241,6 +249,7 @@ enum PropertyType {
   APARTMENT
   ShortLET
   Hostels
+  HOTEL_ROOM
 }
 
 enum BookingStatus {
@@ -259,4 +268,45 @@ enum PaymentStatus {
   PENDING
   SUCCESS
   FAILED
+}
+
+model ManagementStaff {
+  id        String   @id @default(uuid())
+  agentId   String
+  agent     User     @relation("AgentToStaff", fields: [agentId], references: [id])
+  name      String
+  username  String   @unique
+  password  String
+  role      StaffRole @default(RECEPTIONIST)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bookings  Booking[] @relation("StaffToBooking")
+}
+
+enum StaffRole {
+  MANAGER
+  RECEPTIONIST
+}
+
+model HotelRoom {
+  id          String   @id @default(uuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  roomNumber  String
+  roomName    String?
+  category    String   // Standard, Deluxe, etc.
+  floor       String?
+  price       Int
+  description String?
+  amenities   String?
+  status      RoomStatus @default(AVAILABLE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  bookings    Booking[] @relation("RoomToBooking")
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
 }
