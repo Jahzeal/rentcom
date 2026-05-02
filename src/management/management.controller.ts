@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } fro
 import { ManagementService } from './management.service';
 import { CreateStaffDto, CreateHotelRoomDto, UpdateRoomStatusDto, ProcessWalkInDto } from './dto/management.dto';
 import { JwtGuard } from '../auth/guard'; // Assuming JwtGuard exists
-import { Roles } from '../auth/decorator'; // Assuming Roles decorator exists
+import { Roles } from '../auth/decorator/roles.decorator';
 import { UserRole } from '@prisma/client';
 
 @Controller('management')

@@ -62,6 +62,7 @@ export class ManagementService {
           baths: 1,
           typerooms: dto.category,
           images: [], // Images would be handled by a separate upload logic or added here
+          offers: "",
         },
       });
 
