@@ -83,7 +83,6 @@ export class ManagementService {
           price: dto.price,
           description: dto.description,
           amenities: dto.amenities,
-          images: dto.images || [],
         },
       });
     });
