@@ -164,7 +164,7 @@ model Booking {
   notes      String?
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
-  property   Property      @relation(fields: [propertyId], references: [id])
+  property   Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   user       User          @relation(fields: [userId], references: [id])
   payments   Payment[]
 
@@ -172,7 +172,7 @@ model Booking {
   processedByStaffId String?
   staff             ManagementStaff? @relation("StaffToBooking", fields: [processedByStaffId], references: [id])
   hotelRoomId       String?
-  hotelRoom         HotelRoom? @relation("RoomToBooking", fields: [hotelRoomId], references: [id])
+  hotelRoom         HotelRoom? @relation("RoomToBooking", fields: [hotelRoomId], references: [id], onDelete: Cascade)
 }
 
 model enscroll {
@@ -224,7 +224,7 @@ model Rental {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
   payments   Payment[]
-  property   Property     @relation(fields: [propertyId], references: [id])
+  property   Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   user       User         @relation(fields: [userId], references: [id])
 }
 
