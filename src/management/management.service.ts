@@ -274,22 +274,21 @@ export class ManagementService {
       return this.prisma.property.delete({ where: { id: hotelRoom.propertyId } });
     }
 
-    // 2. Check if it's a ShortletOption
-    const shortletOption = await this.prisma.shortletOption.findUnique({
+    // 2. Check if it's a RoomOption (for Shortlets)
+    const roomOption = await this.prisma.roomOption.findUnique({
       where: { id: roomId },
       include: { shortlet: { include: { property: true } } }
     });
 
-    if (shortletOption) {
-      const hasAccess = await this.verifyAccess(userId, shortletOption.shortlet.propertyId);
+    if (roomOption) {
+      const hasAccess = await this.verifyAccess(userId, roomOption.shortlet.propertyId);
       if (!hasAccess) throw new ForbiddenException("You do not have permission to delete this shortlet option");
       
-      // If it's the only option, delete the whole property. Otherwise just the option.
-      const optionCount = await this.prisma.shortletOption.count({ where: { shortletId: shortletOption.shortletId } });
+      const optionCount = await this.prisma.roomOption.count({ where: { shortletId: roomOption.shortletId } });
       if (optionCount <= 1) {
-        return this.prisma.property.delete({ where: { id: shortletOption.shortlet.propertyId } });
+        return this.prisma.property.delete({ where: { id: roomOption.shortlet.propertyId } });
       } else {
-        return this.prisma.shortletOption.delete({ where: { id: roomId } });
+        return this.prisma.roomOption.delete({ where: { id: roomId } });
       }
     }
 
