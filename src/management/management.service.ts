@@ -260,29 +260,47 @@ export class ManagementService {
   }
 
   async deleteHotelRoom(userId: string, roomId: string) {
-    console.log(`Attempting to delete room: ${roomId} by user: ${userId}`);
+    console.log(`Attempting to delete room/shortlet: ${roomId} by user: ${userId}`);
     
-    const room = await this.prisma.hotelRoom.findUnique({
+    // 1. Check if it's a HotelRoom
+    const hotelRoom = await this.prisma.hotelRoom.findUnique({
       where: { id: roomId },
       include: { property: true }
     });
 
-    if (!room) {
-      // Fallback: maybe they are trying to delete a Property directly?
-      const prop = await this.prisma.property.findUnique({ where: { id: roomId } });
-      if (prop) {
-        if (prop.userId !== userId) throw new ForbiddenException("Unauthorized");
-        return this.prisma.property.delete({ where: { id: roomId } });
-      }
-      throw new NotFoundException(`Room or Property with ID ${roomId} not found`);
+    if (hotelRoom) {
+      const hasAccess = await this.verifyAccess(userId, hotelRoom.propertyId);
+      if (!hasAccess) throw new ForbiddenException("You do not have permission to delete this room");
+      return this.prisma.property.delete({ where: { id: hotelRoom.propertyId } });
     }
-    
-    const hasAccess = await this.verifyAccess(userId, room.propertyId);
-    if (!hasAccess) throw new ForbiddenException("You do not have permission to delete this room");
 
-    return this.prisma.property.delete({
-      where: { id: room.propertyId }
+    // 2. Check if it's a ShortletOption
+    const shortletOption = await this.prisma.shortletOption.findUnique({
+      where: { id: roomId },
+      include: { shortlet: { include: { property: true } } }
     });
+
+    if (shortletOption) {
+      const hasAccess = await this.verifyAccess(userId, shortletOption.shortlet.propertyId);
+      if (!hasAccess) throw new ForbiddenException("You do not have permission to delete this shortlet option");
+      
+      // If it's the only option, delete the whole property. Otherwise just the option.
+      const optionCount = await this.prisma.shortletOption.count({ where: { shortletId: shortletOption.shortletId } });
+      if (optionCount <= 1) {
+        return this.prisma.property.delete({ where: { id: shortletOption.shortlet.propertyId } });
+      } else {
+        return this.prisma.shortletOption.delete({ where: { id: roomId } });
+      }
+    }
+
+    // 3. Fallback: check Property directly
+    const prop = await this.prisma.property.findUnique({ where: { id: roomId } });
+    if (prop) {
+      if (prop.userId !== userId) throw new ForbiddenException("Unauthorized");
+      return this.prisma.property.delete({ where: { id: roomId } });
+    }
+
+    throw new NotFoundException(`Room, Option, or Property with ID ${roomId} not found`);
   }
 
   async getHotelProfile(userId: string) {
