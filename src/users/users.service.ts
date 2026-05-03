@@ -213,4 +213,11 @@ export class UsersService {
       },
     });
   }
+  
+  async subscribeManagement(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { isManagement: true }
+    });
+  }
 }

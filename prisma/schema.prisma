@@ -63,6 +63,7 @@ model User {
   appliesRequested   appliesRequested[] // FIXED: this is now many []
   enscrolls          enscroll[]
   verified           Boolean                   @default(false)
+  isManagement       Boolean                   @default(false)
   phoneNumber        String?
   hotelName          String?
   hotelAddress       String?

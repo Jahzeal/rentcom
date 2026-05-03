@@ -108,7 +108,7 @@ export class AuthService {
     await this.prisma.emailVerification.delete({ where: { id: verification.id } });
 
     // Auto-login after signup (use your existing signToken)
-    return this.signToken(user.id, user.email, user.role);
+    return this.signToken(user.id, user.email, user.role, user.isManagement);
   }
 
   async resendVerificationCode(email: string) {
@@ -166,7 +166,7 @@ export class AuthService {
     const pdMatches = await argon.verify(user.hash, dto.password);
     if (!pdMatches) throw new ForbiddenException('Credentials incorrect');
     // if pass doesnt incorrect throw exemption
-    return this.signToken(user.id, user.email, user.role);
+    return this.signToken(user.id, user.email, user.role, user.isManagement);
   }
 
   async forgotPassword(email: string) {
@@ -375,11 +375,13 @@ export class AuthService {
     userId: string,
     email: string,
     role: UserRole,
+    isManagement: boolean = false,
   ): Promise<{ access_token: string }> {
     const payload = {
       sub: userId,
       email,
       role,
+      isManagement,
     };
     const jwtSecret = this.config.get<string>('JWT_SECRET');
     const token = await this.jwt.signAsync(payload, {
