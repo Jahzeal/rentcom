@@ -89,4 +89,9 @@ export class UserController {
   getAppliesRequested(@GetUser('id') userid: string) {
     return this.usersService.getAllUserRequestApplied(userid);
   }
+
+  @Post('subscribe-management')
+  subscribeManagement(@GetUser('id') userId: string) {
+    return this.usersService.subscribeManagement(userId);
+  }
 }
