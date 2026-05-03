@@ -79,7 +79,7 @@ export class PropertiesService {
 
   async getPropertiesByAgent(agentId: string) {
     return this.prisma.property.findMany({
-      where: { userId: agentId },
+      where: { userId: agentId, deletedAt: null },
       include: {
         amenities: true,
         shortlet: {
