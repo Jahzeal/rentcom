@@ -112,7 +112,12 @@ export class ManagementService {
     if (staff) agentId = staff.agentId;
 
     const hotelRooms = await this.prisma.hotelRoom.findMany({
-      where: { property: { userId: agentId } },
+      where: { 
+        property: { 
+          userId: agentId,
+          deletedAt: null // Only show non-deleted rooms
+        } 
+      },
       include: { 
         property: { select: { title: true, address: true, location: true, images: true } },
         bookings: {
@@ -127,7 +132,12 @@ export class ManagementService {
     });
 
     const shortlets = await this.prisma.shortlet.findMany({
-      where: { property: { userId: agentId } },
+      where: { 
+        property: { 
+          userId: agentId,
+          deletedAt: null // Only show non-deleted shortlets
+        } 
+      },
       include: { 
         property: { select: { title: true, address: true, location: true, images: true } },
         roomOptions: true 
@@ -271,7 +281,12 @@ export class ManagementService {
     if (hotelRoom) {
       const hasAccess = await this.verifyAccess(userId, hotelRoom.propertyId);
       if (!hasAccess) throw new ForbiddenException("You do not have permission to delete this room");
-      return this.prisma.property.delete({ where: { id: hotelRoom.propertyId } });
+      
+      // Use Soft Delete: mark as deleted instead of removing from DB
+      return this.prisma.property.update({ 
+        where: { id: hotelRoom.propertyId },
+        data: { deletedAt: new Date() }
+      });
     }
 
     // 2. Check if it's a RoomOption (for Shortlets)
@@ -286,8 +301,13 @@ export class ManagementService {
       
       const optionCount = await this.prisma.roomOption.count({ where: { shortletId: roomOption.shortletId } });
       if (optionCount <= 1) {
-        return this.prisma.property.delete({ where: { id: roomOption.shortlet.propertyId } });
+        // If it's the only option, Soft Delete the whole property
+        return this.prisma.property.update({ 
+          where: { id: roomOption.shortlet.propertyId },
+          data: { deletedAt: new Date() }
+        });
       } else {
+        // If there are multiple options, we can actually delete the specific option record 
         return this.prisma.roomOption.delete({ where: { id: roomId } });
       }
     }
@@ -296,7 +316,10 @@ export class ManagementService {
     const prop = await this.prisma.property.findUnique({ where: { id: roomId } });
     if (prop) {
       if (prop.userId !== userId) throw new ForbiddenException("Unauthorized");
-      return this.prisma.property.delete({ where: { id: roomId } });
+      return this.prisma.property.update({ 
+        where: { id: roomId },
+        data: { deletedAt: new Date() }
+      });
     }
 
     throw new NotFoundException(`Room, Option, or Property with ID ${roomId} not found`);
@@ -328,5 +351,87 @@ export class ManagementService {
         hotelCoords: dto.hotelCoords,
       }
     });
+  }
+
+  // --- Reports & Analytics ---
+  async getReports(userId: string) {
+    let agentId = userId;
+    const staff = await this.prisma.managementStaff.findUnique({ where: { id: userId } });
+    if (staff) agentId = staff.agentId;
+
+    const now = new Date();
+
+    // 1. Fetch all relevant data
+    const [payments, bookings, rooms] = await Promise.all([
+      this.prisma.payment.findMany({
+        where: { 
+          status: 'SUCCESS',
+          booking: { property: { userId: agentId, deletedAt: null } }
+        },
+        include: { booking: { include: { hotelRoom: true } } }
+      }),
+      this.prisma.booking.findMany({
+        where: { property: { userId: agentId, deletedAt: null } },
+      }),
+      this.prisma.hotelRoom.findMany({
+        where: { property: { userId: agentId, deletedAt: null } }
+      })
+    ]);
+
+    // 2. Calculate KPIs
+    const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
+    const totalBookings = bookings.length;
+    const occupancyRate = rooms.length > 0 
+      ? (rooms.filter(r => r.status === 'OCCUPIED').length / rooms.length) * 100 
+      : 0;
+    
+    // 3. Monthly Revenue Trend (Last 6 Months)
+    const monthlyRevenue: any[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+      const monthLabel = monthStart.toLocaleString('en-US', { month: 'short' });
+      
+      const revenue = payments
+        .filter(p => p.createdAt >= monthStart && p.createdAt <= monthEnd)
+        .reduce((sum, p) => sum + p.amount, 0);
+        
+      monthlyRevenue.push({ name: monthLabel, revenue });
+    }
+
+    // 4. Revenue by Category
+    const categoryStats: Record<string, number> = {};
+    payments.forEach(p => {
+      const cat = p.booking?.hotelRoom?.category || 'General';
+      categoryStats[cat] = (categoryStats[cat] || 0) + p.amount;
+    });
+    const categoryData = Object.entries(categoryStats).map(([name, value]) => ({ name, value }));
+
+    // 5. Recent Activity
+    const recentTransactions = payments
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, 10)
+      .map(p => ({
+        id: p.id,
+        amount: p.amount,
+        date: p.createdAt,
+        room: p.booking?.hotelRoom?.roomNumber || 'N/A',
+        status: p.status
+      }));
+
+    return {
+      kpis: {
+        totalRevenue,
+        totalBookings,
+        occupancyRate: Math.round(occupancyRate),
+        activeRooms: rooms.filter(r => r.status === 'AVAILABLE').length,
+        totalRooms: rooms.length
+      },
+      charts: {
+        monthlyRevenue,
+        categoryData
+      },
+      recentTransactions
+    };
   }
 }

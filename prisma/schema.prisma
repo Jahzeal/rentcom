@@ -110,6 +110,7 @@ model Property {
   baths            Int
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
+  deletedAt        DateTime?
   coords           Json?
   location         String
   offers           String
@@ -124,6 +125,8 @@ model Property {
   userId           String?
   user             User?              @relation(fields: [userId], references: [id])
   hotelRooms       HotelRoom[]
+
+  @@index([deletedAt])
 }
 
 model TourRequest {
@@ -238,8 +241,8 @@ model Payment {
   reference String
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
-  booking   Booking?      @relation(fields: [bookingId], references: [id])
-  rental    Rental?       @relation(fields: [rentalId], references: [id])
+  booking   Booking?      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  rental    Rental?       @relation(fields: [rentalId], references: [id], onDelete: Cascade)
   user      User          @relation(fields: [userId], references: [id])
 }
 
