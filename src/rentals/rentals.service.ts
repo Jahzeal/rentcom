@@ -81,7 +81,7 @@ export class RentalsService {
       orderBy: { createdAt: 'desc' },
       include: {
         amenities: true,
-        user: { select: { id: true, hotelName: true, hotelAddress: true, hotelLocation: true } },
+        user: { select: { id: true, hotelName: true, hotelAddress: true, hotelLocation: true, isManagement: true, role: true } },
         shortlet: {
           include: {
             roomOptions: true,
@@ -98,7 +98,8 @@ export class RentalsService {
       const standalone: any[] = [];
 
       for (const p of allMatchingProperties) {
-        if ((p.type === 'HOTEL_ROOM' || p.type === 'ShortLET') && p.userId) {
+        // Only group for accounts with an ACTIVE Management Subscription
+        if ((p.type === 'HOTEL_ROOM' || p.type === 'ShortLET') && p.userId && p.user?.isManagement) {
           if (!hotelGroups.has(p.userId)) hotelGroups.set(p.userId, []);
           hotelGroups.get(p.userId)?.push(p);
         } else {
@@ -110,17 +111,17 @@ export class RentalsService {
       const hotelListings = Array.from(hotelGroups.entries()).map(([userId, rooms]) => {
         const firstRoom = rooms[0];
         const allPrices = rooms.flatMap(r => {
-           const pRaw = r.price as any;
-           // 1. Handle Array of objects (Shortlets/Legacy)
-           if (Array.isArray(pRaw)) return pRaw.map(p => p.price || 0);
-           // 2. Handle Single Number or String
-           const num = parseFloat(pRaw);
-           if (!isNaN(num) && num > 0) return [num];
-           // 3. Handle object with amount property
-           if (pRaw && typeof pRaw === 'object' && pRaw.amount) return [parseFloat(pRaw.amount)];
-           
-           console.warn(`[Grouping] Could not parse price for room ${r.id}:`, pRaw);
-           return [];
+          const pRaw = r.price as any;
+          // 1. Handle Array of objects (Shortlets/Legacy)
+          if (Array.isArray(pRaw)) return pRaw.map(p => p.price || 0);
+          // 2. Handle Single Number or String
+          const num = parseFloat(pRaw);
+          if (!isNaN(num) && num > 0) return [num];
+          // 3. Handle object with amount property
+          if (pRaw && typeof pRaw === 'object' && pRaw.amount) return [parseFloat(pRaw.amount)];
+
+          console.warn(`[Grouping] Could not parse price for room ${r.id}:`, pRaw);
+          return [];
         }).filter(p => p > 0);
 
         const minPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0;
@@ -154,7 +155,7 @@ export class RentalsService {
       const { min, max } = dto.price;
       finalProperties = finalProperties.filter((p) => {
         if (p.isHotelListing) {
-           return (min === undefined || p.priceRange.max >= min) && (max === undefined || p.priceRange.min <= max);
+          return (min === undefined || p.priceRange.max >= min) && (max === undefined || p.priceRange.min <= max);
         }
         const priceJson = p.price;
         if (!Array.isArray(priceJson)) return false;
