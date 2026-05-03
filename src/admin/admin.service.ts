@@ -8,8 +8,8 @@ import { editUserDto } from '../users/dto/users.dto';
 export class AdminService {
   constructor(private prisma: PrismaService) {}
   async getStats(agentId?: string) {
-    const propertyFilter = agentId ? { userId: agentId } : {};
-    const relatedFilter = agentId ? { property: { userId: agentId } } : {};
+    const propertyFilter = agentId ? { userId: agentId, deletedAt: null } : { deletedAt: null };
+    const relatedFilter = agentId ? { property: { userId: agentId, deletedAt: null } } : { property: { deletedAt: null } };
 
     const [
       totalUsers,
@@ -85,6 +85,7 @@ export class AdminService {
 
   async getAllProperties() {
     return this.prisma.property.findMany({
+      where: { deletedAt: null },
       include: {
         amenities: true,
       },
@@ -103,8 +104,10 @@ export class AdminService {
         }
       }
 
-      return this.prisma.property.delete({
+      // Use Soft Delete for properties to preserve booking/payment history
+      return this.prisma.property.update({
         where: { id: propetyId },
+        data: { deletedAt: new Date() }
       });
     } catch (error) {
       // Prisma throws P2025 if record doesn't exist

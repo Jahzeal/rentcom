@@ -75,6 +75,14 @@ export class MoreOptionsDto {
   @IsArray()
   @IsString({ each: true })
   selectedPets?: string[];
+
+  @IsOptional()
+  @IsString()
+  moveInDate?: string;
+
+  @IsOptional()
+  @IsString()
+  moveOutDate?: string;
 }
 export class FilterPropertyDto {
   @IsOptional()
