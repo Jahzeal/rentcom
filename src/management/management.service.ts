@@ -8,6 +8,29 @@ import { RoomStatus, BookingStatus } from '@prisma/client';
 export class ManagementService {
   constructor(private prisma: PrismaService) {}
 
+  // Helper to verify if a user (Agent or Staff) has access to a property
+  private async verifyAccess(userId: string, propertyId: string) {
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { userId: true }
+    });
+
+    if (!property) return false;
+
+    // Case 1: The user is the Agent who owns the property
+    if (property.userId === userId) return true;
+
+    // Case 2: The user is a Staff member working for the Agent who owns the property
+    const staff = await this.prisma.managementStaff.findUnique({
+      where: { id: userId },
+      select: { agentId: true }
+    });
+
+    if (staff && staff.agentId === property.userId) return true;
+
+    return false;
+  }
+
   // --- Staff Management ---
   async createStaff(agentId: string, dto: CreateStaffDto) {
     return this.prisma.managementStaff.create({
@@ -30,18 +53,20 @@ export class ManagementService {
   }
 
   // --- Hotel Room Management ---
-  async createHotelRoom(agentId: string, dto: CreateHotelRoomDto) {
+  async createHotelRoom(userId: string, dto: CreateHotelRoomDto) {
     return this.prisma.$transaction(async (tx) => {
-      // 1. Fetch Agent's profile to get default address/location if not provided in DTO
-      const agent = await tx.user.findUnique({
-        where: { id: agentId }
-      });
+      // 1. Identify the Agent (could be the user or the staff's boss)
+      let agentId = userId;
+      const staff = await tx.managementStaff.findUnique({ where: { id: userId } });
+      if (staff) agentId = staff.agentId;
+
+      const agent = await tx.user.findUnique({ where: { id: agentId } });
 
       const finalAddress = dto.address || agent?.hotelAddress || 'Hotel Location';
       const finalLocation = dto.location || agent?.hotelLocation || 'Hotel Area';
       const finalCoords = dto.coords || agent?.hotelCoords || null;
 
-      // 2. Create a "Listing" (Property) for this room so it shows up in Rentals/Dashboard
+      // 2. Create a "Listing" (Property) for this room
       const property = await tx.property.create({
         data: {
           userId: agentId,
@@ -82,7 +107,11 @@ export class ManagementService {
     });
   }
 
-  async getRoomsByAgent(agentId: string) {
+  async getRoomsByAgent(userId: string) {
+    let agentId = userId;
+    const staff = await this.prisma.managementStaff.findUnique({ where: { id: userId } });
+    if (staff) agentId = staff.agentId;
+
     const hotelRooms = await this.prisma.hotelRoom.findMany({
       where: { property: { userId: agentId } },
       include: { 
@@ -106,7 +135,6 @@ export class ManagementService {
       }
     });
 
-    // Merge both into a single room-board format
     const allRooms = [
       ...hotelRooms.map(r => ({
         id: r.id,
@@ -126,8 +154,8 @@ export class ManagementService {
         category: 'Shortlet',
         floor: 'N/A',
         price: opt.price,
-        status: 'AVAILABLE', // Shortlet availability is more complex, for now default to available
-        bookings: [], // We'd need to fetch bookings for these specific options
+        status: 'AVAILABLE',
+        bookings: [],
         type: 'SHORTLET'
       })))
     ];
@@ -136,6 +164,12 @@ export class ManagementService {
   }
 
   async updateRoomStatus(userId: string, roomId: string, dto: UpdateRoomStatusDto) {
+    const room = await this.prisma.hotelRoom.findUnique({ where: { id: roomId } });
+    if (!room) throw new Error("Room not found");
+    
+    const hasAccess = await this.verifyAccess(userId, room.propertyId);
+    if (!hasAccess) throw new Error("Unauthorized");
+
     return this.prisma.hotelRoom.update({
       where: { id: roomId },
       data: { status: dto.status },
@@ -145,7 +179,6 @@ export class ManagementService {
   // --- Transactions ---
   async processWalkIn(staffId: string, dto: ProcessWalkInDto) {
     return this.prisma.$transaction(async (tx) => {
-      // 1. Check if room is available
       const room = await tx.hotelRoom.findUnique({
         where: { id: dto.hotelRoomId },
         include: { property: true }
@@ -155,10 +188,9 @@ export class ManagementService {
         throw new Error('Room is not available or owner missing');
       }
 
-      // 2. Create a Booking record
       const booking = await tx.booking.create({
         data: {
-          userId: room.property.userId as string, // Link to the agent
+          userId: room.property.userId as string,
           propertyId: room.propertyId,
           hotelRoomId: room.id,
           startDate: new Date(dto.startDate),
@@ -177,7 +209,6 @@ export class ManagementService {
         },
       });
 
-      // 3. Update room status to OCCUPIED
       await tx.hotelRoom.update({
         where: { id: room.id },
         data: { status: 'OCCUPIED' },
@@ -194,9 +225,10 @@ export class ManagementService {
       include: { property: true }
     });
 
-    if (!room || room.property.userId !== userId) {
-      throw new Error("Unauthorized or Room not found");
-    }
+    if (!room) throw new Error("Room not found");
+    
+    const hasAccess = await this.verifyAccess(userId, room.propertyId);
+    if (!hasAccess) throw new Error("Unauthorized");
 
     return this.prisma.$transaction(async (tx) => {
       await tx.property.update({
@@ -234,9 +266,10 @@ export class ManagementService {
       include: { property: true }
     });
 
-    if (!room || room.property.userId !== userId) {
-      throw new Error("Unauthorized or Room not found");
-    }
+    if (!room) throw new Error("Room not found");
+    
+    const hasAccess = await this.verifyAccess(userId, room.propertyId);
+    if (!hasAccess) throw new Error("Unauthorized");
 
     return this.prisma.property.delete({
       where: { id: room.propertyId }
@@ -244,8 +277,12 @@ export class ManagementService {
   }
 
   async getHotelProfile(userId: string) {
+    let agentId = userId;
+    const staff = await this.prisma.managementStaff.findUnique({ where: { id: userId } });
+    if (staff) agentId = staff.agentId;
+
     return this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: agentId },
       select: {
         hotelName: true,
         hotelAddress: true,
@@ -256,6 +293,7 @@ export class ManagementService {
   }
 
   async updateHotelProfile(userId: string, dto: any) {
+    // Only Agents can update the hotel profile
     return this.prisma.user.update({
       where: { id: userId },
       data: {
