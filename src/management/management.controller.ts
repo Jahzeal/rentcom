@@ -70,6 +70,12 @@ export class ManagementController {
   }
 
   @UseGuards(JwtGuard)
+  @Get('reports')
+  getReports(@Req() req: any) {
+    return this.managementService.getReports(req.user.id);
+  }
+
+  @UseGuards(JwtGuard)
   @Patch('profile')
   updateProfile(@Req() req: any, @Body() dto: any) {
     return this.managementService.updateHotelProfile(req.user.id, dto);
