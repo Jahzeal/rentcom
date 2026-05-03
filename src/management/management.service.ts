@@ -1,10 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStaffDto, CreateHotelRoomDto, UpdateRoomStatusDto, ProcessWalkInDto, UpdateHotelRoomDto } from './dto/management.dto';
 import { RoomStatus, BookingStatus } from '@prisma/client';
 
 @Injectable()
-// Forced update to ensure git picks up the fix for HotelRoom images
 export class ManagementService {
   constructor(private prisma: PrismaService) {}
 
@@ -165,10 +164,10 @@ export class ManagementService {
 
   async updateRoomStatus(userId: string, roomId: string, dto: UpdateRoomStatusDto) {
     const room = await this.prisma.hotelRoom.findUnique({ where: { id: roomId } });
-    if (!room) throw new Error("Room not found");
+    if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
     
     const hasAccess = await this.verifyAccess(userId, room.propertyId);
-    if (!hasAccess) throw new Error("Unauthorized");
+    if (!hasAccess) throw new ForbiddenException("You do not have permission to modify this room");
 
     return this.prisma.hotelRoom.update({
       where: { id: roomId },
@@ -184,9 +183,9 @@ export class ManagementService {
         include: { property: true }
       });
 
-      if (!room || room.status !== 'AVAILABLE' || !room.property.userId) {
-        throw new Error('Room is not available or owner missing');
-      }
+      if (!room) throw new NotFoundException("Room not found");
+      if (room.status !== 'AVAILABLE') throw new BadRequestException("Room is not available for booking");
+      if (!room.property.userId) throw new BadRequestException("Property owner missing");
 
       const booking = await tx.booking.create({
         data: {
@@ -225,10 +224,10 @@ export class ManagementService {
       include: { property: true }
     });
 
-    if (!room) throw new Error("Room not found");
+    if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
     
     const hasAccess = await this.verifyAccess(userId, room.propertyId);
-    if (!hasAccess) throw new Error("Unauthorized");
+    if (!hasAccess) throw new ForbiddenException("Unauthorized access to this room");
 
     return this.prisma.$transaction(async (tx) => {
       await tx.property.update({
@@ -261,15 +260,25 @@ export class ManagementService {
   }
 
   async deleteHotelRoom(userId: string, roomId: string) {
+    console.log(`Attempting to delete room: ${roomId} by user: ${userId}`);
+    
     const room = await this.prisma.hotelRoom.findUnique({
       where: { id: roomId },
       include: { property: true }
     });
 
-    if (!room) throw new Error("Room not found");
+    if (!room) {
+      // Fallback: maybe they are trying to delete a Property directly?
+      const prop = await this.prisma.property.findUnique({ where: { id: roomId } });
+      if (prop) {
+        if (prop.userId !== userId) throw new ForbiddenException("Unauthorized");
+        return this.prisma.property.delete({ where: { id: roomId } });
+      }
+      throw new NotFoundException(`Room or Property with ID ${roomId} not found`);
+    }
     
     const hasAccess = await this.verifyAccess(userId, room.propertyId);
-    if (!hasAccess) throw new Error("Unauthorized");
+    if (!hasAccess) throw new ForbiddenException("You do not have permission to delete this room");
 
     return this.prisma.property.delete({
       where: { id: room.propertyId }
@@ -293,7 +302,6 @@ export class ManagementService {
   }
 
   async updateHotelProfile(userId: string, dto: any) {
-    // Only Agents can update the hotel profile
     return this.prisma.user.update({
       where: { id: userId },
       data: {
