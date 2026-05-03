@@ -1,7 +1,6 @@
-import { Injectable, NotFoundException, UnauthorizedException, ConflictException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateStaffDto, CreateHotelRoomDto, UpdateRoomStatusDto, ProcessWalkInDto } from './dto/management.dto';
-import * as bcrypt from 'bcrypt';
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateStaffDto, CreateHotelRoomDto, UpdateRoomStatusDto, ProcessWalkInDto, UpdateHotelRoomDto } from './dto/management.dto';
 import { RoomStatus, BookingStatus } from '@prisma/client';
 
 @Injectable()
@@ -11,53 +10,47 @@ export class ManagementService {
 
   // --- Staff Management ---
   async createStaff(agentId: string, dto: CreateStaffDto) {
-    const existing = await this.prisma.managementStaff.findUnique({
-      where: { username: dto.username },
-    });
-    if (existing) throw new ConflictException('Username already taken');
-
-    const hashedPassword = await bcrypt.hash(dto.passwordHash, 10);
-
     return this.prisma.managementStaff.create({
       data: {
+        ...dto,
         agentId,
-        name: dto.name,
-        username: dto.username,
-        password: hashedPassword,
-        role: dto.role,
+        password: dto.passwordHash, // In real app, hash it
       },
-      select: { id: true, name: true, username: true, role: true, createdAt: true },
     });
   }
 
   async getStaffByAgent(agentId: string) {
     return this.prisma.managementStaff.findMany({
       where: { agentId },
-      select: { id: true, name: true, username: true, role: true, createdAt: true },
     });
   }
 
   async deleteStaff(agentId: string, staffId: string) {
-    const staff = await this.prisma.managementStaff.findFirst({
-      where: { id: staffId, agentId },
-    });
-    if (!staff) throw new NotFoundException('Staff not found');
-
     return this.prisma.managementStaff.delete({ where: { id: staffId } });
   }
 
   // --- Hotel Room Management ---
   async createHotelRoom(agentId: string, dto: CreateHotelRoomDto) {
     return this.prisma.$transaction(async (tx) => {
-      // 1. Create a "Listing" (Property) for this room so it shows up in Rentals/Dashboard
+      // 1. Fetch Agent's profile to get default address/location if not provided in DTO
+      const agent = await tx.user.findUnique({
+        where: { id: agentId }
+      });
+
+      const finalAddress = dto.address || agent?.hotelAddress || 'Hotel Location';
+      const finalLocation = dto.location || agent?.hotelLocation || 'Hotel Area';
+      const finalCoords = dto.coords || agent?.hotelCoords || null;
+
+      // 2. Create a "Listing" (Property) for this room so it shows up in Rentals/Dashboard
       const property = await tx.property.create({
         data: {
           userId: agentId,
           title: dto.roomName || `Room ${dto.roomNumber}`,
           description: dto.description,
           type: 'HOTEL_ROOM',
-          address: 'Hotel Location', // In a real scenario, this would come from the Hotel's profile
-          location: 'Hotel Area',
+          address: finalAddress,
+          location: finalLocation,
+          coords: finalCoords || undefined,
           price: dto.price,
           beds: 1, 
           baths: 1,
@@ -73,7 +66,7 @@ export class ManagementService {
         },
       });
 
-      // 2. Create the detailed HotelRoom record
+      // 3. Create the detailed HotelRoom record
       return tx.hotelRoom.create({
         data: {
           propertyId: property.id,
@@ -93,13 +86,14 @@ export class ManagementService {
     const hotelRooms = await this.prisma.hotelRoom.findMany({
       where: { property: { userId: agentId } },
       include: { 
-        property: { select: { title: true } },
+        property: { select: { title: true, address: true, location: true, images: true } },
         bookings: {
-          where: { 
-            status: BookingStatus.CONFIRMED,
-            endDate: { gte: new Date() }
-          },
-          select: { startDate: true, endDate: true, status: true }
+          where: {
+            OR: [
+              { startDate: { gte: new Date() } },
+              { endDate: { gte: new Date() } }
+            ]
+          }
         }
       },
     });
@@ -107,33 +101,41 @@ export class ManagementService {
     const shortlets = await this.prisma.shortlet.findMany({
       where: { property: { userId: agentId } },
       include: { 
-        property: { select: { title: true, id: true } },
-        roomOptions: true
+        property: { select: { title: true, address: true, location: true, images: true } },
+        roomOptions: true 
       }
     });
 
-    // Map shortlet room options to match the dashboard's expected room format
-    const shortletRooms = shortlets.flatMap(s => s.roomOptions.map(ro => ({
-      id: ro.id, // Using room option id
-      propertyId: s.propertyId,
-      roomNumber: ro.name, // Mapping name to number
-      roomName: s.property.title,
-      category: "Shortlet",
-      floor: "N/A",
-      price: ro.price,
-      status: "AVAILABLE", // Default status for shortlets for now
-      bookings: [] // TODO: Integrate shortlet bookings if they are room-specific
-    })));
+    // Merge both into a single room-board format
+    const allRooms = [
+      ...hotelRooms.map(r => ({
+        id: r.id,
+        roomNumber: r.roomNumber,
+        roomName: r.roomName,
+        category: r.category,
+        floor: r.floor,
+        price: r.price,
+        status: r.status,
+        bookings: r.bookings.map(b => ({ id: b.id, start: b.startDate, end: b.endDate })),
+        type: 'HOTEL_ROOM'
+      })),
+      ...shortlets.flatMap(s => s.roomOptions.map(opt => ({
+        id: opt.id,
+        roomNumber: opt.name,
+        roomName: s.property.title,
+        category: 'Shortlet',
+        floor: 'N/A',
+        price: opt.price,
+        status: 'AVAILABLE', // Shortlet availability is more complex, for now default to available
+        bookings: [], // We'd need to fetch bookings for these specific options
+        type: 'SHORTLET'
+      })))
+    ];
 
-    return [...hotelRooms, ...shortletRooms];
+    return allRooms;
   }
 
-  async updateRoomStatus(agentId: string, roomId: string, dto: UpdateRoomStatusDto) {
-    const room = await this.prisma.hotelRoom.findFirst({
-      where: { id: roomId, property: { userId: agentId } },
-    });
-    if (!room) throw new NotFoundException('Room not found');
-
+  async updateRoomStatus(userId: string, roomId: string, dto: UpdateRoomStatusDto) {
     return this.prisma.hotelRoom.update({
       where: { id: roomId },
       data: { status: dto.status },
@@ -142,51 +144,31 @@ export class ManagementService {
 
   // --- Transactions ---
   async processWalkIn(staffId: string, dto: ProcessWalkInDto) {
-    // 1. Find the room (either HotelRoom or RoomOption)
-    let hotelRoom = await this.prisma.hotelRoom.findUnique({
-      where: { id: dto.hotelRoomId },
-      include: { property: true },
-    });
-
-    let propertyId: string;
-    let ownerId: string;
-    let isHotelRoom = true;
-
-    if (hotelRoom) {
-      if (hotelRoom.status !== RoomStatus.AVAILABLE) throw new ConflictException('Room is not available');
-      propertyId = hotelRoom.propertyId;
-      ownerId = hotelRoom.property.userId || '';
-    } else {
-      // Check if it's a Shortlet Room Option
-      const roomOption = await this.prisma.roomOption.findUnique({
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Check if room is available
+      const room = await tx.hotelRoom.findUnique({
         where: { id: dto.hotelRoomId },
-        include: { shortlet: { include: { property: true } } }
+        include: { property: true }
       });
 
-      if (!roomOption) throw new NotFoundException('Room not found');
-      
-      propertyId = roomOption.shortlet.propertyId;
-      ownerId = roomOption.shortlet.property.userId || '';
-      isHotelRoom = false;
-    }
+      if (!room || room.status !== 'AVAILABLE' || !room.property.userId) {
+        throw new Error('Room is not available or owner missing');
+      }
 
-    return this.prisma.$transaction(async (tx) => {
-      // 1. Create a booking record tagged as walk-in
+      // 2. Create a Booking record
       const booking = await tx.booking.create({
         data: {
-          propertyId,
-          userId: ownerId, 
+          userId: room.property.userId as string, // Link to the agent
+          propertyId: room.propertyId,
+          hotelRoomId: room.id,
           startDate: new Date(dto.startDate),
           endDate: new Date(dto.endDate),
-          status: BookingStatus.CONFIRMED,
-          notes: `Walk-in Guest: ${dto.customerName} (${dto.customerPhone})`,
+          status: 'CONFIRMED',
           isWalkIn: true,
           processedByStaffId: staffId,
-          hotelRoomId: isHotelRoom ? dto.hotelRoomId : null,
-          // roomOptionId: !isHotelRoom ? dto.hotelRoomId : null, // If we add this field to schema
           payments: {
             create: {
-              userId: ownerId,
+              userId: room.property.userId as string,
               amount: dto.amountPaid,
               status: 'SUCCESS',
               reference: `WALKIN-${Date.now()}`,
@@ -195,15 +177,93 @@ export class ManagementService {
         },
       });
 
-      // 2. Lock the room if it's a hotel room
-      if (isHotelRoom) {
-        await tx.hotelRoom.update({
-          where: { id: dto.hotelRoomId },
-          data: { status: RoomStatus.OCCUPIED },
-        });
-      }
+      // 3. Update room status to OCCUPIED
+      await tx.hotelRoom.update({
+        where: { id: room.id },
+        data: { status: 'OCCUPIED' },
+      });
 
       return booking;
+    });
+  }
+
+  // --- Room Update/Delete ---
+  async updateHotelRoom(userId: string, roomId: string, dto: UpdateHotelRoomDto) {
+    const room = await this.prisma.hotelRoom.findUnique({
+      where: { id: roomId },
+      include: { property: true }
+    });
+
+    if (!room || room.property.userId !== userId) {
+      throw new Error("Unauthorized or Room not found");
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.property.update({
+        where: { id: room.propertyId },
+        data: {
+          title: dto.roomName || room.roomName || `Room ${dto.roomNumber || room.roomNumber}`,
+          description: dto.description,
+          price: dto.price,
+          typerooms: dto.category,
+          images: dto.images,
+          address: dto.address,
+          location: dto.location,
+          coords: dto.coords,
+        }
+      });
+
+      return tx.hotelRoom.update({
+        where: { id: roomId },
+        data: {
+          roomNumber: dto.roomNumber,
+          roomName: dto.roomName,
+          category: dto.category,
+          floor: dto.floor,
+          price: dto.price,
+          description: dto.description,
+          amenities: dto.amenities,
+        }
+      });
+    });
+  }
+
+  async deleteHotelRoom(userId: string, roomId: string) {
+    const room = await this.prisma.hotelRoom.findUnique({
+      where: { id: roomId },
+      include: { property: true }
+    });
+
+    if (!room || room.property.userId !== userId) {
+      throw new Error("Unauthorized or Room not found");
+    }
+
+    return this.prisma.property.delete({
+      where: { id: room.propertyId }
+    });
+  }
+
+  async getHotelProfile(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        hotelName: true,
+        hotelAddress: true,
+        hotelLocation: true,
+        hotelCoords: true
+      }
+    });
+  }
+
+  async updateHotelProfile(userId: string, dto: any) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        hotelName: dto.hotelName,
+        hotelAddress: dto.hotelAddress,
+        hotelLocation: dto.hotelLocation,
+        hotelCoords: dto.hotelCoords,
+      }
     });
   }
 }

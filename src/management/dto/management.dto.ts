@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEnum, IsOptional, IsInt, IsBoolean, IsArray } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsOptional, IsInt, IsBoolean, IsArray, IsObject } from 'class-validator';
 // Forced update to ensure git picks up the fix for IsArray
 import { StaffRole, RoomStatus } from '@prisma/client';
 
@@ -57,6 +57,18 @@ export class CreateHotelRoomDto {
   @IsString({ each: true })
   @IsOptional()
   images?: string[];
+
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @IsString()
+  @IsOptional()
+  location?: string;
+
+  @IsObject()
+  @IsOptional()
+  coords?: any;
 }
 
 export class UpdateRoomStatusDto {
@@ -88,4 +100,51 @@ export class ProcessWalkInDto {
   @IsString()
   @IsNotEmpty()
   endDate: string;
+}
+
+export class UpdateHotelRoomDto {
+  @IsString()
+  @IsOptional()
+  roomNumber?: string;
+
+  @IsString()
+  @IsOptional()
+  roomName?: string;
+
+  @IsString()
+  @IsOptional()
+  category?: string;
+
+  @IsString()
+  @IsOptional()
+  floor?: string;
+
+  @IsInt()
+  @IsOptional()
+  price?: number;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsString()
+  @IsOptional()
+  amenities?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  images?: string[];
+
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @IsString()
+  @IsOptional()
+  location?: string;
+
+  @IsObject()
+  @IsOptional()
+  coords?: any;
 }

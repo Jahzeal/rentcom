@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { ManagementService } from './management.service';
-import { CreateStaffDto, CreateHotelRoomDto, UpdateRoomStatusDto, ProcessWalkInDto } from './dto/management.dto';
+import { CreateStaffDto, CreateHotelRoomDto, UpdateRoomStatusDto, ProcessWalkInDto, UpdateHotelRoomDto } from './dto/management.dto';
 import { JwtGuard } from '../auth/guard'; // Assuming JwtGuard exists
 import { Roles } from '../auth/decorator/roles.decorator';
 import { UserRole } from '@prisma/client';
@@ -49,6 +49,30 @@ export class ManagementController {
   @Patch('rooms/:id/status')
   updateStatus(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateRoomStatusDto) {
     return this.managementService.updateRoomStatus(req.user.id, id, dto);
+  }
+
+  @UseGuards(JwtGuard)
+  @Patch('rooms/:id')
+  updateRoom(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateHotelRoomDto) {
+    return this.managementService.updateHotelRoom(req.user.id, id, dto);
+  }
+
+  @UseGuards(JwtGuard)
+  @Delete('rooms/:id')
+  deleteRoom(@Req() req: any, @Param('id') id: string) {
+    return this.managementService.deleteHotelRoom(req.user.id, id);
+  }
+
+  @UseGuards(JwtGuard)
+  @Get('profile')
+  getProfile(@Req() req: any) {
+    return this.managementService.getHotelProfile(req.user.id);
+  }
+
+  @UseGuards(JwtGuard)
+  @Patch('profile')
+  updateProfile(@Req() req: any, @Body() dto: any) {
+    return this.managementService.updateHotelProfile(req.user.id, dto);
   }
 
   // --- Transactions ---
