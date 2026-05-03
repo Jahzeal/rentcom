@@ -74,12 +74,11 @@ export class RentalsService {
       };
     }
 
-    // Fetch paginated properties
-    let properties: any[] = await this.prisma.property.findMany({
+    // Fetch ALL matching properties first to ensure correct grouping
+    // In a massive production DB, this should be a raw SQL grouping query for performance
+    const allMatchingProperties = await this.prisma.property.findMany({
       where: whereClause,
       orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip: (page - 1) * limit,
       include: {
         amenities: true,
         user: { select: { id: true, hotelName: true, hotelAddress: true, hotelLocation: true } },
@@ -91,85 +90,89 @@ export class RentalsService {
       },
     });
 
-    // Grouping Logic for HOTEL_ROOM
-    // If the request is not filtering for a specific hotel owner already
-    if (!dto.userId) {
-      const consolidated: any[] = [];
-      const hotelGroups = new Map<string, any[]>();
+    let finalProperties: any[] = [];
 
-      for (const p of properties) {
-        if (p.type === 'HOTEL_ROOM' && p.userId) {
+    // Grouping Logic for HOTEL_ROOM
+    if (!dto.userId) {
+      const hotelGroups = new Map<string, any[]>();
+      const standalone: any[] = [];
+
+      for (const p of allMatchingProperties) {
+        if ((p.type === 'HOTEL_ROOM' || p.type === 'ShortLET') && p.userId) {
           if (!hotelGroups.has(p.userId)) hotelGroups.set(p.userId, []);
-          const group = hotelGroups.get(p.userId);
-          if (group) group.push(p);
+          hotelGroups.get(p.userId)?.push(p);
         } else {
-          consolidated.push(p);
+          standalone.push(p);
         }
       }
 
       // Convert Hotel Groups to Single "Hotel Listings"
-      for (const [userId, rooms] of hotelGroups.entries()) {
+      const hotelListings = Array.from(hotelGroups.entries()).map(([userId, rooms]) => {
         const firstRoom = rooms[0];
         const allPrices = rooms.flatMap(r => {
-           if (Array.isArray(r.price)) return r.price.map(p => p.price || 0);
+           const pRaw = r.price as any;
+           // 1. Handle Array of objects (Shortlets/Legacy)
+           if (Array.isArray(pRaw)) return pRaw.map(p => p.price || 0);
+           // 2. Handle Single Number or String
+           const num = parseFloat(pRaw);
+           if (!isNaN(num) && num > 0) return [num];
+           // 3. Handle object with amount property
+           if (pRaw && typeof pRaw === 'object' && pRaw.amount) return [parseFloat(pRaw.amount)];
+           
+           console.warn(`[Grouping] Could not parse price for room ${r.id}:`, pRaw);
            return [];
         }).filter(p => p > 0);
 
-        const minPrice = Math.min(...allPrices);
-        const maxPrice = Math.max(...allPrices);
+        const minPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0;
+        const maxPrice = allPrices.length > 0 ? Math.max(...allPrices) : 0;
 
-        consolidated.push({
-          id: `hotel-${userId}`, // Virtual ID
+        return {
+          id: `hotel-${userId}`,
           isHotelListing: true,
           userId: userId,
           title: firstRoom.user?.hotelName || "Hotel",
           address: firstRoom.user?.hotelAddress || firstRoom.address,
           location: firstRoom.user?.hotelLocation || firstRoom.location,
-          images: rooms.flatMap(r => r.images).slice(0, 10), // Collective images
+          images: rooms.flatMap(r => r.images).slice(0, 10),
           type: 'HOTEL_ROOM',
           priceRange: { min: minPrice, max: maxPrice },
+          price: minPrice, // Fallback for sort/filter
           totalRooms: rooms.length,
           user: firstRoom.user,
           amenities: Array.from(new Set(rooms.flatMap(r => r.amenities.map(a => a.name)))).map(name => ({ name })),
           description: `Welcome to ${firstRoom.user?.hotelName}. We have ${rooms.length} rooms available for your stay.`
-        });
-      }
-      
-      properties = consolidated;
+        };
+      });
+
+      finalProperties = [...standalone, ...hotelListings];
+    } else {
+      finalProperties = allMatchingProperties;
     }
 
-    // JSON price filter (TypeScript-safe)
+    // JSON price filter (TypeScript-safe) on consolidated list
     if (dto.price?.min !== undefined || dto.price?.max !== undefined) {
       const { min, max } = dto.price;
-
-      properties = properties.filter((property) => {
-        const priceJson = property.price;
-
+      finalProperties = finalProperties.filter((p) => {
+        if (p.isHotelListing) {
+           return (min === undefined || p.priceRange.max >= min) && (max === undefined || p.priceRange.min <= max);
+        }
+        const priceJson = p.price;
         if (!Array.isArray(priceJson)) return false;
-
-        return priceJson.some((item): boolean => {
-          if (typeof item !== 'object' || item === null) return false;
-
-          // Narrow type to object with optional price
-          const priceItem = item as { price?: number };
-
-          if (priceItem.price === undefined) return false;
-          if (min !== undefined && priceItem.price < min) return false;
-          if (max !== undefined && priceItem.price > max) return false;
-
+        return priceJson.some((item: any) => {
+          if (!item?.price) return false;
+          if (min !== undefined && item.price < min) return false;
+          if (max !== undefined && item.price > max) return false;
           return true;
         });
       });
     }
 
-    // Total count (ignores in-memory price filtering)
-    const total = await this.prisma.property.count({
-      where: whereClause,
-    });
+    // Now apply pagination to the final consolidated list
+    const total = finalProperties.length;
+    const paginatedProperties = finalProperties.slice((page - 1) * limit, page * limit);
 
-    // Product-ready response
     return {
-      data: properties,
+      data: paginatedProperties,
       meta: {
         page,
         limit,
