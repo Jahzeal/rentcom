@@ -64,6 +64,10 @@ model User {
   enscrolls          enscroll[]
   verified           Boolean                   @default(false)
   phoneNumber        String?
+  hotelName          String?
+  hotelAddress       String?
+  hotelLocation      String?
+  hotelCoords        Json?
   phoneVerifications PhoneNumberVerification[]
   properties         Property[]
   pushSubscriptions  PushSubscription[]
