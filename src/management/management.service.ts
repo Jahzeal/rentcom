@@ -224,7 +224,7 @@ export class ManagementService {
   }
 
   // --- Transactions ---
-  async processWalkIn(staffId: string, dto: ProcessWalkInDto) {
+  async processWalkIn(userId: string, dto: ProcessWalkInDto) {
     return this.prisma.$transaction(async (tx) => {
       const room = await tx.hotelRoom.findUnique({
         where: { id: dto.hotelRoomId },
@@ -235,6 +235,11 @@ export class ManagementService {
       if (room.status !== 'AVAILABLE') throw new BadRequestException("Room is not available for booking");
       if (!room.property.userId) throw new BadRequestException("Property owner missing");
 
+      // Check if the processor is a staff member or the agent themselves
+      const staff = await tx.managementStaff.findUnique({
+        where: { id: userId }
+      });
+
       const booking = await tx.booking.create({
         data: {
           userId: room.property.userId as string,
@@ -244,7 +249,7 @@ export class ManagementService {
           endDate: new Date(dto.endDate),
           status: 'CONFIRMED',
           isWalkIn: true,
-          processedByStaffId: staffId,
+          processedByStaffId: staff ? userId : null,
           payments: {
             create: {
               userId: room.property.userId as string,
