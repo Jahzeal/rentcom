@@ -48,22 +48,23 @@ export class RentalsService {
 
     // Base Prisma where clause
     const whereClause: Prisma.PropertyWhereInput = {
-      deletedAt: null, // Site-wide filter for soft-deleted properties
+      deletedAt: null,
       ...(dto.propertyType && { type: dto.propertyType }),
       ...(dto.roomType && { typerooms: dto.roomType }),
-      ...(orFilters.length > 0 && { OR: orFilters }),
       ...(dto.userId && { userId: dto.userId }),
-      // For general marketplace search (no specific userId), hide rooms that aren't AVAILABLE
-      ...(!dto.userId && {
-        OR: [
-          { type: { not: 'HOTEL_ROOM' } }, // Show all non-hotel properties
-          { 
-            hotelRooms: {
-              some: { status: 'AVAILABLE' }
+      AND: [
+        ...(orFilters.length > 0 ? [{ OR: orFilters }] : []),
+        {
+          OR: [
+            { type: { not: 'HOTEL_ROOM' } }, // Show all non-hotel properties
+            { 
+              hotelRooms: {
+                some: { status: 'AVAILABLE' }
+              }
             }
-          }
-        ]
-      })
+          ]
+        }
+      ]
     };
 
     // Availability Filter (Move-in / Move-out)
