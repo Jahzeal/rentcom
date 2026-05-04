@@ -124,18 +124,29 @@ export class RentalsService {
       const hotelListings = Array.from(hotelGroups.entries()).map(([userId, rooms]) => {
         const firstRoom = rooms[0];
         const allPrices = rooms.flatMap(r => {
+          // 1. Handle Shortlet room options
+          if (r.type === 'ShortLET' && r.shortlet?.roomOptions) {
+            return r.shortlet.roomOptions.map(o => Number(o.price));
+          }
+
+          // 2. Handle HotelRoom price (number)
+          if (r.type === 'HOTEL_ROOM' && typeof r.price === 'number') {
+            return [r.price];
+          }
+
           const pRaw = r.price as any;
-          // 1. Handle Array of objects (Shortlets/Legacy)
-          if (Array.isArray(pRaw)) return pRaw.map(p => p.price || 0);
-          // 2. Handle Single Number or String
+          // 3. Handle Array of objects (Legacy)
+          if (Array.isArray(pRaw)) return pRaw.map(p => Number(p.price) || 0);
+          
+          // 4. Handle Single Number or String
           const num = parseFloat(pRaw);
           if (!isNaN(num) && num > 0) return [num];
-          // 3. Handle object with amount property
+
+          // 5. Handle object with amount property
           if (pRaw && typeof pRaw === 'object' && pRaw.amount) return [parseFloat(pRaw.amount)];
 
-          console.warn(`[Grouping] Could not parse price for room ${r.id}:`, pRaw);
           return [];
-        }).filter(p => p > 0);
+        }).filter(p => !isNaN(p) && p > 0);
 
         const allBeds = rooms.map(r => r.beds || 1);
         const allBaths = rooms.map(r => r.baths || 1);
