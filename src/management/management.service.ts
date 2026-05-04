@@ -158,6 +158,7 @@ export class ManagementService {
       })),
       ...shortlets.flatMap(s => s.roomOptions.map(opt => ({
         id: opt.id,
+        shortletId: s.id,
         roomNumber: opt.name,
         roomName: s.property.title,
         category: 'Shortlet',
@@ -170,6 +171,43 @@ export class ManagementService {
     ];
 
     return allRooms;
+  }
+
+  async getRoomById(userId: string, roomId: string) {
+    const room = await this.prisma.hotelRoom.findUnique({
+      where: { id: roomId },
+      include: {
+        property: {
+          select: {
+            images: true,
+            address: true,
+            location: true,
+            coords: true,
+            userId: true,
+          }
+        }
+      }
+    });
+
+    if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
+
+    const hasAccess = await this.verifyAccess(userId, room.propertyId);
+    if (!hasAccess) throw new ForbiddenException("Unauthorized access to this room");
+
+    return {
+      id: room.id,
+      roomNumber: room.roomNumber,
+      roomName: room.roomName,
+      category: room.category,
+      floor: room.floor,
+      price: room.price,
+      description: room.description,
+      amenities: room.amenities,
+      images: room.property.images,
+      address: room.property.address,
+      location: room.property.location,
+      coords: room.property.coords,
+    };
   }
 
   async updateRoomStatus(userId: string, roomId: string, dto: UpdateRoomStatusDto) {

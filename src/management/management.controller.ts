@@ -58,6 +58,12 @@ export class ManagementController {
   }
 
   @UseGuards(JwtGuard)
+  @Get('rooms/:id')
+  getRoom(@Req() req: any, @Param('id') id: string) {
+    return this.managementService.getRoomById(req.user.id, id);
+  }
+
+  @UseGuards(JwtGuard)
   @Delete('rooms/:id')
   deleteRoom(@Req() req: any, @Param('id') id: string) {
     return this.managementService.deleteHotelRoom(req.user.id, id);
