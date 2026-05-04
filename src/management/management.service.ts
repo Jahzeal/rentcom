@@ -255,7 +255,7 @@ export class ManagementService {
               userId: room.property.userId as string,
               amount: dto.amountPaid,
               status: 'SUCCESS',
-              reference: `WALKIN-${Date.now()}`,
+              reference: dto.reference || `WALKIN-${Date.now()}`,
             }
           }
         },

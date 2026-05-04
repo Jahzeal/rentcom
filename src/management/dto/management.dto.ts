@@ -100,6 +100,10 @@ export class ProcessWalkInDto {
   @IsString()
   @IsNotEmpty()
   endDate: string;
+
+  @IsString()
+  @IsOptional()
+  reference?: string;
 }
 
 export class UpdateHotelRoomDto {
