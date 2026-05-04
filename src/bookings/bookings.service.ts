@@ -97,9 +97,16 @@ export class BookingsService {
   async getAllBookings() {
     return this.prisma.booking.findMany({
       include: {
-        property: true,
+        property: {
+          include: {
+            user: {
+              select: { hotelName: true }
+            }
+          }
+        },
         user: true,
         payments: true,
+        hotelRoom: true,
       },
       orderBy: {
         createdAt: 'desc',

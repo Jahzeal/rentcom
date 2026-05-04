@@ -48,22 +48,23 @@ export class RentalsService {
 
     // Base Prisma where clause
     const whereClause: Prisma.PropertyWhereInput = {
-      deletedAt: null, // Site-wide filter for soft-deleted properties
+      deletedAt: null,
       ...(dto.propertyType && { type: dto.propertyType }),
       ...(dto.roomType && { typerooms: dto.roomType }),
-      ...(orFilters.length > 0 && { OR: orFilters }),
       ...(dto.userId && { userId: dto.userId }),
-      // For general marketplace search (no specific userId), hide rooms that aren't AVAILABLE
-      ...(!dto.userId && {
-        OR: [
-          { type: { not: 'HOTEL_ROOM' } }, // Show all non-hotel properties
-          { 
-            hotelRooms: {
-              some: { status: 'AVAILABLE' }
+      AND: [
+        ...(orFilters.length > 0 ? [{ OR: orFilters }] : []),
+        {
+          OR: [
+            { type: { not: 'HOTEL_ROOM' } }, // Show all non-hotel properties
+            { 
+              hotelRooms: {
+                some: { status: 'AVAILABLE' }
+              }
             }
-          }
-        ]
-      })
+          ]
+        }
+      ]
     };
 
     // Availability Filter (Move-in / Move-out)
@@ -136,6 +137,11 @@ export class RentalsService {
           return [];
         }).filter(p => p > 0);
 
+        const allBeds = rooms.map(r => r.beds || 1);
+        const allBaths = rooms.map(r => r.baths || 1);
+        const minBeds = Math.min(...allBeds);
+        const maxBeds = Math.max(...allBeds);
+
         const minPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0;
         const maxPrice = allPrices.length > 0 ? Math.max(...allPrices) : 0;
 
@@ -147,10 +153,18 @@ export class RentalsService {
           address: firstRoom.user?.hotelAddress || firstRoom.address,
           location: firstRoom.user?.hotelLocation || firstRoom.location,
           images: rooms.flatMap(r => r.images).slice(0, 10),
-          type: 'HOTEL_ROOM',
+          type: rooms.some(r => r.type === 'ShortLET') && rooms.some(r => r.type === 'HOTEL_ROOM') ? 'HOTEL_SHORTLET' : firstRoom.type,
           priceRange: { min: minPrice, max: maxPrice },
           price: minPrice, // Fallback for sort/filter
           totalRooms: rooms.length,
+          beds: minBeds,
+          baths: Math.min(...allBaths),
+          // Pass room options so ListingCard can show the range (e.g. 1-2 bd)
+          roomOptions: rooms.map(r => ({
+             beds: r.beds || 1,
+             price: typeof r.price === 'number' ? r.price : 0,
+             name: r.roomName
+          })),
           user: firstRoom.user,
           amenities: Array.from(new Set(rooms.flatMap(r => r.amenities.map(a => a.name)))).map(name => ({ name })),
           description: `Welcome to ${firstRoom.user?.hotelName}. We have ${rooms.length} rooms available for your stay.`
