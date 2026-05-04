@@ -16,25 +16,16 @@ async function bootstrap() {
       }),
     );
 
-    const ALLOWED_ORIGINS = [
-      'https://renant.netlify.app',
-      'https://www.renant.netlify.app',
-      'http://localhost:3001',
-      'http://127.0.0.1:3000',
-      'http://localhost:3000',
-    ];
-
-    app.enableCors({
-      origin: (origin, callback) => {
-        if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(new Error(`Origin ${origin} not allowed by CORS`), false);
-        }
-      },
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-      allowedHeaders: 'Content-Type, Authorization',
-      credentials: true,
+    app.use((req: any, res: any, next: any) => {
+      res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+      res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+      } else {
+        next();
+      }
     });
 
     //  SWAGGER SETUP
