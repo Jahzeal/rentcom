@@ -10,4 +10,9 @@ export class RentalsController {
   async getRentals(@Query() dto: FilterPropertyDto) {
     return this.rentalsService.getRentals(dto);
   }
+
+  @Get('grouped')
+  async getGroupedHotels(@Query() dto: FilterPropertyDto) {
+    return this.rentalsService.getGroupedHotels(dto);
+  }
 }
