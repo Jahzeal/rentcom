@@ -53,6 +53,17 @@ export class RentalsService {
       ...(dto.roomType && { typerooms: dto.roomType }),
       ...(orFilters.length > 0 && { OR: orFilters }),
       ...(dto.userId && { userId: dto.userId }),
+      // For general marketplace search (no specific userId), hide rooms that aren't AVAILABLE
+      ...(!dto.userId && {
+        OR: [
+          { type: { not: 'HOTEL_ROOM' } }, // Show all non-hotel properties
+          { 
+            hotelRooms: {
+              some: { status: 'AVAILABLE' }
+            }
+          }
+        ]
+      })
     };
 
     // Availability Filter (Move-in / Move-out)
@@ -82,6 +93,7 @@ export class RentalsService {
       include: {
         amenities: true,
         user: { select: { id: true, hotelName: true, hotelAddress: true, hotelLocation: true, isManagement: true, role: true } },
+        hotelRooms: { select: { status: true } },
         shortlet: {
           include: {
             roomOptions: true,
