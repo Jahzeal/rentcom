@@ -91,8 +91,12 @@ export class ManagementController {
   @UseGuards(JwtGuard)
   @Post('walk-in')
   processWalkIn(@Req() req: any, @Body() dto: ProcessWalkInDto) {
-    // req.user here might be the ManagementStaff if we use a specific guard
-    // For now assuming we extract staff ID
     return this.managementService.processWalkIn(req.user.id, dto);
+  }
+
+  @UseGuards(JwtGuard)
+  @Get('bookings')
+  getBookings(@Req() req: any) {
+    return this.managementService.getBookings(req.user.id);
   }
 }

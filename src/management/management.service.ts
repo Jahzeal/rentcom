@@ -472,4 +472,27 @@ export class ManagementService {
       recentTransactions
     };
   }
+
+  async getBookings(userId: string) {
+    let agentId = userId;
+    const staff = await this.prisma.managementStaff.findUnique({ where: { id: userId } });
+    if (staff) agentId = staff.agentId;
+
+    return this.prisma.booking.findMany({
+      where: { property: { userId: agentId, deletedAt: null } },
+      include: {
+        hotelRoom: true,
+        user: {
+          select: {
+            Firstname: true,
+            Lastname: true,
+            email: true,
+            phone: true
+          }
+        },
+        payments: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
 }
