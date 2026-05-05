@@ -1,4 +1,4 @@
-import { Controller, Get, Body, Query } from '@nestjs/common';
+import { Controller, Get, Body, Query, Param } from '@nestjs/common';
 import { RentalsService } from './rentals.service';
 import { FilterPropertyDto } from '../rentals/Dto/rentals.dto';
 
@@ -14,5 +14,10 @@ export class RentalsController {
   @Get('grouped')
   async getGroupedHotels(@Query() dto: FilterPropertyDto) {
     return this.rentalsService.getGroupedHotels(dto);
+  }
+
+  @Get('hotel-profile/:id')
+  async getHotelProfile(@Param('id') id: string) {
+    return this.rentalsService.getHotelProfile(id);
   }
 }

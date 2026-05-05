@@ -106,37 +106,62 @@ export class RentalsService {
    * Specialized method for the Landing Page - Groups management inventory by user.
    */
   async getGroupedHotels(dto: FilterPropertyDto = {}) {
-    // For grouping, we fetch all relevant properties from management accounts
+    const page = Number(dto.page) || 1;
+    const limit = Number(dto.limit) || 12;
+
+    const orFilters: Prisma.PropertyWhereInput[] = [];
+    if (dto.searchLocation) {
+      orFilters.push(
+        { location: { contains: dto.searchLocation, mode: 'insensitive' } },
+        { address: { contains: dto.searchLocation, mode: 'insensitive' } },
+      );
+    }
+    if (dto.moreOptions?.keywords) {
+      const keyword = dto.moreOptions.keywords;
+      orFilters.push(
+        { title: { contains: keyword, mode: 'insensitive' } },
+        { description: { contains: keyword, mode: 'insensitive' } },
+      );
+    }
+
+    const whereClause: Prisma.PropertyWhereInput = {
+      deletedAt: null,
+      ...(dto.propertyType && (dto.propertyType as any) !== 'All types' && { type: dto.propertyType as any }),
+      ...(dto.userId && { userId: dto.userId }),
+      AND: orFilters.length > 0 ? [{ OR: orFilters }] : [],
+    };
+
+    // Fetch all properties matching filters to group correctly
     const allProperties = await this.prisma.property.findMany({
-      where: {
-        deletedAt: null,
-        user: { isManagement: true },
-        type: { in: ['HOTEL_ROOM', 'ShortLET'] }
-      },
+      where: whereClause,
       include: {
         user: true,
         hotelRooms: true,
         shortlet: { include: { roomOptions: true } }
-      }
+      },
+      orderBy: { createdAt: 'desc' },
     });
 
     const hotelGroups = new Map<string, any[]>();
+    const individualListings: any[] = [];
+
     for (const p of allProperties) {
-      if (p.userId) {
+      // Group if user is management and it's a multi-room type
+      if (p.user?.isManagement && (p.type === 'HOTEL_ROOM' || p.type === 'ShortLET') && p.userId) {
         if (!hotelGroups.has(p.userId)) hotelGroups.set(p.userId, []);
         hotelGroups.get(p.userId)?.push(p);
+      } else {
+        // Individual agent or other property types stay individual
+        individualListings.push(p);
       }
     }
 
-    const hotelListings = Array.from(hotelGroups.entries()).map(([userId, rooms]) => {
+    const groupedListings = Array.from(hotelGroups.entries()).map(([userId, rooms]) => {
       const firstRoom = rooms[0];
       
       const allPrices = rooms.flatMap(r => {
         if (r.type === 'ShortLET' && r.shortlet?.roomOptions) {
           return r.shortlet.roomOptions.map(o => Number(o.price));
-        }
-        if (r.type === 'HOTEL_ROOM' && typeof r.price === 'number') {
-          return [r.price];
         }
         const pRaw = r.price as any;
         if (Array.isArray(pRaw)) return pRaw.map(p => Number(p.price) || 0);
@@ -152,13 +177,14 @@ export class RentalsService {
       const maxPrice = allPrices.length > 0 ? Math.max(...allPrices) : 0;
 
       return {
+        ...firstRoom,
         id: `hotel-${userId}`,
         isHotelListing: true,
         userId: userId,
-        title: firstRoom.user?.hotelName || "Hotel",
+        title: firstRoom.user?.hotelName || "Hotel Collection",
         address: firstRoom.user?.hotelAddress || firstRoom.address,
         location: firstRoom.user?.hotelLocation || firstRoom.location,
-        images: rooms.flatMap(r => r.images).slice(0, 10),
+        images: Array.from(new Set(rooms.flatMap(r => r.images))).slice(0, 10),
         type: rooms.some(r => r.type === 'ShortLET') && rooms.some(r => r.type === 'HOTEL_ROOM') ? 'HOTEL_SHORTLET' : firstRoom.type,
         priceRange: { min: minPrice, max: maxPrice },
         price: minPrice,
@@ -167,7 +193,7 @@ export class RentalsService {
         baths: Math.min(...rooms.map(r => r.baths || 1)),
         roomOptions: rooms.map(r => ({
           id: r.id,
-          name: r.roomName || r.category,
+          name: r.roomName || r.category || r.title,
           beds: r.beds || 1,
           price: r.price,
           description: r.description
@@ -175,13 +201,78 @@ export class RentalsService {
       };
     });
 
+    const combinedListings = [...groupedListings, ...individualListings];
+
+    // Re-sort by date
+    combinedListings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const start = (page - 1) * limit;
+    const paginatedListings = combinedListings.slice(start, start + limit);
+
     return {
-      data: hotelListings,
+      data: paginatedListings,
       meta: {
-        page: 1,
-        limit: hotelListings.length,
-        total: hotelListings.length,
-        hasNextPage: false
+        page: page,
+        limit: limit,
+        total: combinedListings.length,
+        hasNextPage: combinedListings.length > start + limit
+      }
+    };
+  }
+
+  async getHotelProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        hotelName: true,
+        hotelAddress: true,
+        hotelLocation: true,
+        isManagement: true,
+        role: true,
+      }
+    });
+
+    if (!user || !user.isManagement) {
+      throw new Error("Hotel not found or user is not a management account.");
+    }
+
+    const rooms = await this.prisma.property.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        type: { in: ['HOTEL_ROOM', 'ShortLET'] }
+      },
+      include: {
+        amenities: true,
+        hotelRooms: { select: { status: true } },
+        shortlet: { include: { roomOptions: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return {
+      profile: {
+        id: user.id,
+        name: user.hotelName || "Hotel Collection",
+        address: user.hotelAddress || "Premium Location",
+        location: user.hotelLocation,
+      },
+      rooms: rooms.map(r => {
+        // Use normalized price logic
+        let price = 0;
+        if (typeof r.price === 'number') price = r.price;
+        else if (r.price && typeof r.price === 'object' && (r.price as any).amount) price = (r.price as any).amount;
+
+        return {
+          ...r,
+          price,
+          status: r.hotelRooms?.[0]?.status || 'AVAILABLE'
+        };
+      }),
+      stats: {
+        totalRooms: rooms.length,
+        availableCount: rooms.filter(r => (r.hotelRooms?.[0]?.status || 'AVAILABLE') === 'AVAILABLE').length
       }
     };
   }
