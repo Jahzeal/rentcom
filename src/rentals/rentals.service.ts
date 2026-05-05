@@ -172,7 +172,7 @@ export class RentalsService {
       },
       include: {
         user: true,
-        hotelRooms: true,
+        hotelRooms: { where: { status: 'AVAILABLE' } },
         shortlet: { include: { roomOptions: true } }
       },
       orderBy: { createdAt: 'desc' },
@@ -285,7 +285,10 @@ export class RentalsService {
       },
       include: {
         amenities: true,
-        hotelRooms: { select: { status: true } },
+        hotelRooms: { 
+          where: { status: 'AVAILABLE' },
+          select: { status: true } 
+        },
         shortlet: { include: { roomOptions: true } }
       },
       orderBy: { createdAt: 'desc' }
