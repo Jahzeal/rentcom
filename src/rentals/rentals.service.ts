@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { FilterPropertyDto } from './Dto/rentals.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, BookingStatus } from '@prisma/client';
 
 @Injectable()
 export class RentalsService {
@@ -56,7 +56,21 @@ export class RentalsService {
               }
             }
           ]
-        }
+        },
+        // Availability Filter
+        ...(dto.startDate && dto.endDate ? [{
+          bookings: {
+            none: {
+              status: { in: [BookingStatus.CONFIRMED, BookingStatus.PENDING] },
+              OR: [
+                {
+                  startDate: { lte: new Date(dto.endDate) },
+                  endDate: { gte: new Date(dto.startDate) },
+                }
+              ]
+            }
+          }
+        }] : [])
       ],
     };
 
@@ -128,15 +142,37 @@ export class RentalsService {
       deletedAt: null,
       ...(dto.propertyType && (dto.propertyType as any) !== 'All types' && { type: dto.propertyType as any }),
       ...(dto.userId && { userId: dto.userId }),
-      AND: orFilters.length > 0 ? [{ OR: orFilters }] : [],
+      AND: [
+        ...(orFilters.length > 0 ? [{ OR: orFilters }] : []),
+        // Availability Filter
+        ...(dto.startDate && dto.endDate ? [{
+          bookings: {
+            none: {
+              status: { in: [BookingStatus.CONFIRMED, BookingStatus.PENDING] },
+              OR: [
+                {
+                  startDate: { lte: new Date(dto.endDate) },
+                  endDate: { gte: new Date(dto.startDate) },
+                }
+              ]
+            }
+          }
+        }] : [])
+      ],
     };
 
     // Fetch all properties matching filters to group correctly
     const allProperties = await this.prisma.property.findMany({
-      where: whereClause,
+      where: {
+        ...whereClause,
+        OR: [
+          { hotelRooms: { some: { status: 'AVAILABLE' } } },
+          { hotelRooms: { none: {} } }
+        ]
+      },
       include: {
         user: true,
-        hotelRooms: true,
+        hotelRooms: { where: { status: 'AVAILABLE' } },
         shortlet: { include: { roomOptions: true } }
       },
       orderBy: { createdAt: 'desc' },
@@ -241,11 +277,18 @@ export class RentalsService {
       where: {
         userId,
         deletedAt: null,
-        type: { in: ['HOTEL_ROOM', 'ShortLET'] }
+        type: { in: ['HOTEL_ROOM', 'ShortLET'] },
+        OR: [
+          { hotelRooms: { some: { status: 'AVAILABLE' } } },
+          { hotelRooms: { none: {} } } // Fallback for simple properties
+        ]
       },
       include: {
         amenities: true,
-        hotelRooms: { select: { status: true } },
+        hotelRooms: { 
+          where: { status: 'AVAILABLE' },
+          select: { status: true } 
+        },
         shortlet: { include: { roomOptions: true } }
       },
       orderBy: { createdAt: 'desc' }
