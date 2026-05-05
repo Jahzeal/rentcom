@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { FilterPropertyDto } from './Dto/rentals.dto';
-import { Prisma, BookingStatus } from '@prisma/client';
+import { Prisma, BookingStatus, PropertyType, RoomStatus } from '@prisma/client';
 
 @Injectable()
 export class RentalsService {
@@ -42,22 +42,7 @@ export class RentalsService {
       ...(dto.userId && { userId: dto.userId }),
       AND: [
         ...(orFilters.length > 0 ? [{ OR: orFilters }] : []),
-        {
-          OR: [
-            { type: { notIn: ['HOTEL_ROOM', 'ShortLET'] } },
-            { 
-              hotelRooms: {
-                some: { status: 'AVAILABLE' }
-              }
-            },
-            {
-              shortlet: {
-                isNot: null
-              }
-            }
-          ]
-        },
-        // Availability Filter
+        // Availability Filter - ONLY for Guest Search (where no specific userId is targeted)
         ...(dto.startDate && dto.endDate ? [{
           bookings: {
             none: {
@@ -70,6 +55,15 @@ export class RentalsService {
               ]
             }
           }
+        }] : []),
+        
+        // Strictly Available Filter - ONLY for Guest Search (where no specific userId is targeted)
+        ...(!dto.userId ? [{
+          OR: [
+            { type: { notIn: [PropertyType.HOTEL_ROOM, PropertyType.ShortLET] } },
+            { hotelRooms: { some: { status: RoomStatus.AVAILABLE } } },
+            { shortlet: { isNot: null } }
+          ]
         }] : [])
       ],
     };
@@ -166,13 +160,13 @@ export class RentalsService {
       where: {
         ...whereClause,
         OR: [
-          { hotelRooms: { some: { status: 'AVAILABLE' } } },
+          { hotelRooms: { some: { status: RoomStatus.AVAILABLE } } },
           { hotelRooms: { none: {} } }
         ]
       },
       include: {
         user: true,
-        hotelRooms: { where: { status: 'AVAILABLE' } },
+        hotelRooms: { where: { status: RoomStatus.AVAILABLE } },
         shortlet: { include: { roomOptions: true } }
       },
       orderBy: { createdAt: 'desc' },
