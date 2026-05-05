@@ -271,16 +271,16 @@ export class RentalsService {
       where: {
         userId,
         deletedAt: null,
-        type: { in: ['HOTEL_ROOM', 'ShortLET'] },
+        type: { in: [PropertyType.HOTEL_ROOM, PropertyType.ShortLET] },
         OR: [
-          { hotelRooms: { some: { status: 'AVAILABLE' } } },
+          { hotelRooms: { some: { status: RoomStatus.AVAILABLE } } },
           { hotelRooms: { none: {} } } // Fallback for simple properties
         ]
       },
       include: {
         amenities: true,
         hotelRooms: { 
-          where: { status: 'AVAILABLE' },
+          where: { status: RoomStatus.AVAILABLE },
           select: { status: true } 
         },
         shortlet: { include: { roomOptions: true } }
