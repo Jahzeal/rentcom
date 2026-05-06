@@ -29,19 +29,23 @@ export class BookingsService {
       );
     }
 
-    // 2. Validate dates (basic check)
+    // 2. Validate dates
     const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (start >= end) {
-      throw new BadRequestException('End date must be after start date');
-    }
-
     const now = new Date();
+    
+    // Set both to midnight to compare only the DAYS
+    start.setHours(0, 0, 0, 0);
     now.setHours(0, 0, 0, 0);
 
     if (start < now) {
       throw new BadRequestException('Start date cannot be in the past');
+    }
+
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+
+    if (start >= end) {
+      throw new BadRequestException('End date must be after start date');
     }
 
     // 3. Create the booking
