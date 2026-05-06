@@ -25,9 +25,14 @@ export class CreateHotelRoomDto {
   @IsOptional()
   propertyId?: string;
 
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  roomNumbers?: string[];
+
   @IsString()
-  @IsNotEmpty()
-  roomNumber: string;
+  @IsOptional()
+  roomNumber?: string;
 
   @IsString()
   @IsOptional()

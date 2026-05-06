@@ -65,11 +65,16 @@ export class ManagementService {
       const finalLocation = dto.location || agent?.hotelLocation || 'Hotel Area';
       const finalCoords = dto.coords || agent?.hotelCoords || null;
 
-      // 2. Create a "Listing" (Property) for this room
+      // Determine room numbers to create
+      const roomsToCreate = dto.roomNumbers && dto.roomNumbers.length > 0 
+        ? dto.roomNumbers 
+        : [dto.roomNumber || "N/A"];
+
+      // 2. Create a "Listing" (Property) for this category
       const property = await tx.property.create({
         data: {
           userId: agentId,
-          title: dto.roomName || `Room ${dto.roomNumber}`,
+          title: dto.roomName || `${dto.category} Rooms`,
           description: dto.description,
           type: 'HOTEL_ROOM',
           address: finalAddress,
@@ -90,19 +95,25 @@ export class ManagementService {
         },
       });
 
-      // 3. Create the detailed HotelRoom record
-      return tx.hotelRoom.create({
-        data: {
-          propertyId: property.id,
-          roomNumber: dto.roomNumber,
-          roomName: dto.roomName,
-          category: dto.category,
-          floor: dto.floor,
-          price: dto.price,
-          description: dto.description,
-          amenities: dto.amenities,
-        },
-      });
+      // 3. Create detailed HotelRoom records for each room number sequentially
+      const hotelRooms: any[] = [];
+      for (const roomNum of roomsToCreate) {
+        const room = await tx.hotelRoom.create({
+          data: {
+            propertyId: property.id,
+            roomNumber: roomNum,
+            roomName: dto.roomName,
+            category: dto.category,
+            floor: dto.floor,
+            price: dto.price,
+            description: dto.description,
+            amenities: dto.amenities,
+          },
+        });
+        hotelRooms.push(room);
+      }
+
+      return hotelRooms[0];
     });
   }
 
@@ -379,7 +390,8 @@ export class ManagementService {
         hotelName: true,
         hotelAddress: true,
         hotelLocation: true,
-        hotelCoords: true
+        hotelCoords: true,
+        hotelCategories: true
       }
     });
   }
@@ -392,6 +404,7 @@ export class ManagementService {
         hotelAddress: dto.hotelAddress,
         hotelLocation: dto.hotelLocation,
         hotelCoords: dto.hotelCoords,
+        hotelCategories: dto.hotelCategories,
       }
     });
   }

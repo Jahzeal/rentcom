@@ -69,6 +69,7 @@ model User {
   hotelAddress       String?
   hotelLocation      String?
   hotelCoords        Json?
+  hotelCategories    String[]
   phoneVerifications PhoneNumberVerification[]
   properties         Property[]
   pushSubscriptions  PushSubscription[]
