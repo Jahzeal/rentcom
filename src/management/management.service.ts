@@ -133,10 +133,7 @@ export class ManagementService {
         property: { select: { title: true, address: true, location: true, images: true } },
         bookings: {
           where: {
-            OR: [
-              { startDate: { gte: new Date() } },
-              { endDate: { gte: new Date() } }
-            ]
+            endDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
           }
         }
       },
