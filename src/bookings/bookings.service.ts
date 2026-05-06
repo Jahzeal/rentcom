@@ -23,8 +23,10 @@ export class BookingsService {
       throw new NotFoundException('Property not found');
     }
 
-    if (property.type !== 'ShortLET') {
-      throw new BadRequestException('Only Shortlet properties can be booked directly');
+    if (property.type !== 'ShortLET' && property.type !== 'HOTEL_ROOM') {
+      throw new BadRequestException(
+        'Only Shortlet or Hotel properties can be booked directly',
+      );
     }
 
     // 2. Validate dates (basic check)
