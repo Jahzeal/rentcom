@@ -95,25 +95,25 @@ export class ManagementService {
         },
       });
 
-      // 3. Create detailed HotelRoom records for each room number
-      const hotelRooms = await Promise.all(
-        roomsToCreate.map(roomNum => 
-          tx.hotelRoom.create({
-            data: {
-              propertyId: property.id,
-              roomNumber: roomNum,
-              roomName: dto.roomName,
-              category: dto.category,
-              floor: dto.floor,
-              price: dto.price,
-              description: dto.description,
-              amenities: dto.amenities,
-            },
-          })
-        )
-      );
+      // 3. Create detailed HotelRoom records for each room number sequentially
+      const hotelRooms: any[] = [];
+      for (const roomNum of roomsToCreate) {
+        const room = await tx.hotelRoom.create({
+          data: {
+            propertyId: property.id,
+            roomNumber: roomNum,
+            roomName: dto.roomName,
+            category: dto.category,
+            floor: dto.floor,
+            price: dto.price,
+            description: dto.description,
+            amenities: dto.amenities,
+          },
+        });
+        hotelRooms.push(room);
+      }
 
-      return hotelRooms[0]; // Return the first one or a summary
+      return hotelRooms[0];
     });
   }
 
