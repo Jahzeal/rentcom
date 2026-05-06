@@ -37,7 +37,10 @@ export class BookingsService {
       throw new BadRequestException('End date must be after start date');
     }
 
-    if (start < new Date()) {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    if (start < now) {
       throw new BadRequestException('Start date cannot be in the past');
     }
 
