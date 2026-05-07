@@ -10,6 +10,20 @@ import { CreateBookingDto } from './dto/booking.dto';
 export class BookingsService {
   constructor(private prisma: PrismaService) {}
 
+  async getReservedDates(propertyId: string) {
+    const bookings = await this.prisma.booking.findMany({
+      where: {
+        propertyId,
+        status: { in: ['CONFIRMED', 'PENDING'] },
+      },
+      select: {
+        startDate: true,
+        endDate: true,
+      },
+    });
+    return bookings;
+  }
+
   async checkAvailability(dto: CreateBookingDto) {
     const { propertyId, startDate, endDate, roomType } = dto;
 
