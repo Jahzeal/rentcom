@@ -22,6 +22,11 @@ export class BookingsController {
     return this.bookingsService.createBooking(userId, dto);
   }
 
+  @Post('check-availability')
+  checkAvailability(@Body() dto: CreateBookingDto) {
+    return this.bookingsService.checkAvailability(dto);
+  }
+
   @Get('agent')
   @Roles('AGENT', 'ADMIN')
   getAgentBookings(@GetUser('id') userId: string) {

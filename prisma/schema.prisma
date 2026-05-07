@@ -178,6 +178,11 @@ model Booking {
   staff             ManagementStaff? @relation("StaffToBooking", fields: [processedByStaffId], references: [id])
   hotelRoomId       String?
   hotelRoom         HotelRoom? @relation("RoomToBooking", fields: [hotelRoomId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([hotelRoomId])
+  @@index([startDate, endDate])
+  @@index([status])
 }
 
 model enscroll {
@@ -312,6 +317,10 @@ model HotelRoom {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   bookings    Booking[] @relation("RoomToBooking")
+
+  @@index([propertyId])
+  @@index([status])
+  @@index([category])
 }
 
 enum RoomStatus {

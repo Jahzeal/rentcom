@@ -10,6 +10,99 @@ import { CreateBookingDto } from './dto/booking.dto';
 export class BookingsService {
   constructor(private prisma: PrismaService) {}
 
+  async checkAvailability(dto: CreateBookingDto) {
+    const { propertyId, startDate, endDate, roomType } = dto;
+
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+    });
+
+    if (!property) throw new NotFoundException('Property not found');
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (start >= end) throw new BadRequestException('End date must be after start date');
+
+    if (property.type === 'HOTEL_ROOM') {
+      const availableRoom = await this.prisma.hotelRoom.findFirst({
+        where: {
+          propertyId,
+          category: roomType,
+          status: 'AVAILABLE',
+          bookings: {
+            none: {
+              OR: [
+                { AND: [{ startDate: { lte: start } }, { endDate: { gt: start } }] },
+                { AND: [{ startDate: { lt: end } }, { endDate: { gte: end } }] },
+                { AND: [{ startDate: { gte: start } }, { endDate: { lte: end } }] },
+              ],
+            },
+          },
+        },
+      });
+
+      if (!availableRoom) {
+        const alternatives = await this.prisma.hotelRoom.findMany({
+          where: {
+            propertyId,
+            status: 'AVAILABLE',
+            NOT: { category: roomType },
+            bookings: {
+              none: {
+                OR: [
+                  { AND: [{ startDate: { lte: start } }, { endDate: { gt: start } }] },
+                  { AND: [{ startDate: { lt: end } }, { endDate: { gte: end } }] },
+                  { AND: [{ startDate: { gte: start } }, { endDate: { lte: end } }] },
+                ],
+              },
+            },
+          },
+          select: { category: true, price: true },
+          distinct: ['category'],
+        });
+
+        if (alternatives.length > 0) {
+          const suggestions = alternatives.map(c => `${c.category} (₦${c.price})`).join(', ');
+          return {
+            available: false,
+            message: `${roomType} category is full for these dates.`,
+            alternatives: suggestions
+          };
+        }
+
+        return {
+          available: false,
+          message: 'The entire hotel is full for these dates.'
+        };
+      }
+
+      return {
+        available: true,
+        message: `${roomType} is available!`,
+        roomId: availableRoom.id
+      };
+    }
+
+    // Shortlet logic (assuming single unit for now)
+    // Add same overlap check for the propertyId
+    const existingBooking = await this.prisma.booking.findFirst({
+        where: {
+            propertyId,
+            OR: [
+                { AND: [{ startDate: { lte: start } }, { endDate: { gt: start } }] },
+                { AND: [{ startDate: { lt: end } }, { endDate: { gte: end } }] },
+                { AND: [{ startDate: { gte: start } }, { endDate: { lte: end } }] },
+            ],
+        }
+    });
+
+    if (existingBooking) {
+        return { available: false, message: 'This property is already booked for these dates.' };
+    }
+
+    return { available: true, message: 'Property is available!' };
+  }
+
   async createBooking(userId: string, dto: CreateBookingDto) {
     const { propertyId, startDate, endDate, notes } = dto;
 
