@@ -86,7 +86,7 @@ export class RentalsService {
             },
           },
           hotelRooms: {
-            select: { status: true },
+            select: { status: true, category: true },
           },
           shortlet: {
             include: {

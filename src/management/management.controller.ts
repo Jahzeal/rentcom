@@ -7,7 +7,7 @@ import { UserRole } from '@prisma/client';
 
 @Controller('management')
 export class ManagementController {
-  constructor(private readonly managementService: ManagementService) {}
+  constructor(private readonly managementService: ManagementService) { }
 
   // --- Staff Management (Agent Only) ---
   @UseGuards(JwtGuard)
