@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -25,6 +26,11 @@ export class BookingsController {
   @Post('check-availability')
   checkAvailability(@Body() dto: CreateBookingDto) {
     return this.bookingsService.checkAvailability(dto);
+  }
+
+  @Get('property/:id/reserved-dates')
+  getReservedDates(@Param('id') id: string) {
+    return this.bookingsService.getReservedDates(id);
   }
 
   @Get('agent')
