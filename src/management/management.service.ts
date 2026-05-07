@@ -143,11 +143,19 @@ export class ManagementService {
       where: { 
         property: { 
           userId: agentId,
-          deletedAt: null // Only show non-deleted shortlets
+          deletedAt: null 
         } 
       },
       include: { 
-        property: { select: { title: true, address: true, location: true, images: true } },
+        property: { 
+          select: { 
+            title: true, 
+            address: true, 
+            location: true, 
+            images: true,
+            bookings: true 
+          } 
+        },
         roomOptions: true 
       }
     });
@@ -173,7 +181,7 @@ export class ManagementService {
         floor: 'N/A',
         price: opt.price,
         status: 'AVAILABLE',
-        bookings: [],
+        bookings: s.property.bookings.map(b => ({ id: b.id, start: b.startDate, end: b.endDate })),
         type: 'SHORTLET'
       })))
     ];

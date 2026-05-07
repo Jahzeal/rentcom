@@ -37,11 +37,96 @@ export class BookingsService {
       throw new BadRequestException('End date must be after start date');
     }
 
-    // 3. Create the booking
+    // 3. Find an available HotelRoom if it's a Hotel property
+    let assignedRoomId: string | null = null;
+    if (property.type === 'HOTEL_ROOM') {
+      // Find a room in the preferred category first
+      const availableRoom = await this.prisma.hotelRoom.findFirst({
+        where: {
+          propertyId: propertyId,
+          category: dto.roomType, // Filter by guest's preferred category
+          status: 'AVAILABLE',
+          bookings: {
+            none: {
+              OR: [
+                {
+                  AND: [
+                    { startDate: { lte: start } },
+                    { endDate: { gt: start } },
+                  ],
+                },
+                {
+                  AND: [
+                    { startDate: { lt: end } },
+                    { endDate: { gte: end } },
+                  ],
+                },
+                {
+                  AND: [
+                    { startDate: { gte: start } },
+                    { endDate: { lte: end } },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      });
+
+      if (!availableRoom) {
+        // Find other categories that HAVE availability for these dates
+        const otherAvailableCategories = await this.prisma.hotelRoom.findMany({
+          where: {
+            propertyId: propertyId,
+            status: 'AVAILABLE',
+            NOT: { category: dto.roomType },
+            bookings: {
+              none: {
+                OR: [
+                  {
+                    AND: [
+                      { startDate: { lte: start } },
+                      { endDate: { gt: start } },
+                    ],
+                  },
+                  {
+                    AND: [
+                      { startDate: { lt: end } },
+                      { endDate: { gte: end } },
+                    ],
+                  },
+                  {
+                    AND: [
+                      { startDate: { gte: start } },
+                      { endDate: { lte: end } },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          select: { category: true, price: true },
+          distinct: ['category'],
+        });
+
+        if (otherAvailableCategories.length > 0) {
+          const suggestions = otherAvailableCategories.map(c => `${c.category} (₦${c.price})`).join(', ');
+          throw new BadRequestException(
+            `${dto.roomType} category is full for the selected date. Modify your date or check other available categories: ${suggestions}`,
+          );
+        }
+
+        throw new BadRequestException('The entire hotel is full for the selected date. Please modify your dates.');
+      }
+      assignedRoomId = availableRoom.id;
+    }
+
+    // 4. Create the booking
     const booking = await this.prisma.booking.create({
       data: {
         userId,
         propertyId,
+        hotelRoomId: assignedRoomId,
         startDate: start,
         endDate: end,
         status: 'PENDING',
@@ -49,6 +134,7 @@ export class BookingsService {
       },
       include: {
         property: true,
+        hotelRoom: true,
         user: {
           select: {
             id: true,
@@ -60,14 +146,14 @@ export class BookingsService {
       },
     });
 
-    // 4. Create a pending payment record
+    // 5. Create a pending payment record
     await this.prisma.payment.create({
       data: {
         userId,
         bookingId: booking.id,
         amount: dto.amount,
         status: 'PENDING',
-        reference: `pending_${booking.id}`, // Placeholder reference
+        reference: `pending_${booking.id}`,
       },
     });
 
