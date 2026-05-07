@@ -19,4 +19,8 @@ export class CreateBookingDto {
 
   @IsNotEmpty()
   amount: number;
+
+  @IsString()
+  @IsOptional()
+  roomType?: string;
 }
