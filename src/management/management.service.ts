@@ -5,7 +5,7 @@ import { RoomStatus, BookingStatus } from '@prisma/client';
 
 @Injectable()
 export class ManagementService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // Helper to verify if a user (Agent or Staff) has access to a property
   private async verifyAccess(userId: string, propertyId: string) {
@@ -66,8 +66,8 @@ export class ManagementService {
       const finalCoords = dto.coords || agent?.hotelCoords || null;
 
       // Determine room numbers to create
-      const roomsToCreate = dto.roomNumbers && dto.roomNumbers.length > 0 
-        ? dto.roomNumbers 
+      const roomsToCreate = dto.roomNumbers && dto.roomNumbers.length > 0
+        ? dto.roomNumbers
         : [dto.roomNumber || "N/A"];
 
       // 2. Create a "Listing" (Property) for this category
@@ -81,10 +81,10 @@ export class ManagementService {
           location: finalLocation,
           coords: finalCoords || undefined,
           price: dto.price,
-          beds: 1, 
+          beds: 1,
           baths: 1,
           typerooms: dto.category,
-          images: dto.images || [], 
+          images: dto.images || [],
           offers: "",
           amenities: dto.amenities ? {
             connectOrCreate: dto.amenities.split(',').map(name => name.trim()).filter(Boolean).map(name => ({
@@ -123,13 +123,13 @@ export class ManagementService {
     if (staff) agentId = staff.agentId;
 
     const hotelRooms = await this.prisma.hotelRoom.findMany({
-      where: { 
-        property: { 
+      where: {
+        property: {
           userId: agentId,
           deletedAt: null // Only show non-deleted rooms
-        } 
+        }
       },
-      include: { 
+      include: {
         property: { select: { title: true, address: true, location: true, images: true } },
         bookings: {
           where: {
@@ -140,23 +140,23 @@ export class ManagementService {
     });
 
     const shortlets = await this.prisma.shortlet.findMany({
-      where: { 
-        property: { 
+      where: {
+        property: {
           userId: agentId,
-          deletedAt: null 
-        } 
+          deletedAt: null
+        }
       },
-      include: { 
-        property: { 
-          select: { 
-            title: true, 
-            address: true, 
-            location: true, 
+      include: {
+        property: {
+          select: {
+            title: true,
+            address: true,
+            location: true,
             images: true,
-            bookings: true 
-          } 
+            bookings: true
+          }
         },
-        roomOptions: true 
+        roomOptions: true
       }
     });
 
@@ -229,7 +229,7 @@ export class ManagementService {
   async updateRoomStatus(userId: string, roomId: string, dto: UpdateRoomStatusDto) {
     const room = await this.prisma.hotelRoom.findUnique({ where: { id: roomId } });
     if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
-    
+
     const hasAccess = await this.verifyAccess(userId, room.propertyId);
     if (!hasAccess) throw new ForbiddenException("You do not have permission to modify this room");
 
@@ -294,7 +294,7 @@ export class ManagementService {
     });
 
     if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
-    
+
     const hasAccess = await this.verifyAccess(userId, room.propertyId);
     if (!hasAccess) throw new ForbiddenException("Unauthorized access to this room");
 
@@ -330,7 +330,7 @@ export class ManagementService {
 
   async deleteHotelRoom(userId: string, roomId: string) {
     console.log(`Attempting to delete room/shortlet: ${roomId} by user: ${userId}`);
-    
+
     // 1. Check if it's a HotelRoom
     const hotelRoom = await this.prisma.hotelRoom.findUnique({
       where: { id: roomId },
@@ -340,9 +340,9 @@ export class ManagementService {
     if (hotelRoom) {
       const hasAccess = await this.verifyAccess(userId, hotelRoom.propertyId);
       if (!hasAccess) throw new ForbiddenException("You do not have permission to delete this room");
-      
+
       // Use Soft Delete: mark as deleted instead of removing from DB
-      return this.prisma.property.update({ 
+      return this.prisma.property.update({
         where: { id: hotelRoom.propertyId },
         data: { deletedAt: new Date() }
       });
@@ -357,11 +357,11 @@ export class ManagementService {
     if (roomOption) {
       const hasAccess = await this.verifyAccess(userId, roomOption.shortlet.propertyId);
       if (!hasAccess) throw new ForbiddenException("You do not have permission to delete this shortlet option");
-      
+
       const optionCount = await this.prisma.roomOption.count({ where: { shortletId: roomOption.shortletId } });
       if (optionCount <= 1) {
         // If it's the only option, Soft Delete the whole property
-        return this.prisma.property.update({ 
+        return this.prisma.property.update({
           where: { id: roomOption.shortlet.propertyId },
           data: { deletedAt: new Date() }
         });
@@ -375,7 +375,7 @@ export class ManagementService {
     const prop = await this.prisma.property.findUnique({ where: { id: roomId } });
     if (prop) {
       if (prop.userId !== userId) throw new ForbiddenException("Unauthorized");
-      return this.prisma.property.update({ 
+      return this.prisma.property.update({
         where: { id: roomId },
         data: { deletedAt: new Date() }
       });
@@ -425,7 +425,7 @@ export class ManagementService {
     // 1. Fetch all relevant data
     const [payments, bookings, rooms] = await Promise.all([
       this.prisma.payment.findMany({
-        where: { 
+        where: {
           status: 'SUCCESS',
           booking: { property: { userId: agentId, deletedAt: null } }
         },
@@ -442,21 +442,21 @@ export class ManagementService {
     // 2. Calculate KPIs
     const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
     const totalBookings = bookings.length;
-    const occupancyRate = rooms.length > 0 
-      ? (rooms.filter(r => r.status === 'OCCUPIED').length / rooms.length) * 100 
+    const occupancyRate = rooms.length > 0
+      ? (rooms.filter(r => r.status === 'OCCUPIED').length / rooms.length) * 100
       : 0;
-    
+
     // 3. Monthly Revenue Trend (Last 6 Months)
     const monthlyRevenue: any[] = [];
     for (let i = 5; i >= 0; i--) {
       const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
       const monthLabel = monthStart.toLocaleString('en-US', { month: 'short' });
-      
+
       const revenue = payments
         .filter(p => p.createdAt >= monthStart && p.createdAt <= monthEnd)
         .reduce((sum, p) => sum + p.amount, 0);
-        
+
       monthlyRevenue.push({ name: monthLabel, revenue });
     }
 
