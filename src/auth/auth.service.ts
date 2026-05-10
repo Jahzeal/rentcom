@@ -55,10 +55,12 @@ export class AuthService {
         code,
         passwordHash: hash,
         role: dto.role || UserRole.USER,
+        Firstname: dto.firstName,
+        Lastname: dto.lastName,
         attempts: 0,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min expiry
         lastSentAt: new Date(),
-      },
+      } as any,
     });
 
     // Send verification email
@@ -101,6 +103,10 @@ export class AuthService {
         email,
         hash: verification.passwordHash,
         role: verification.role,
+        Firstname: (verification as any).Firstname,
+        Lastname: (verification as any).Lastname,
+        hotelName: verification.role === UserRole.AGENT ? (verification as any).Firstname : null,
+        isManagement: verification.role === UserRole.AGENT ? true : false,
       },
     });
 
@@ -367,8 +373,6 @@ export class AuthService {
 
   return { message: 'Phone number verified successfully'};
 }
-
-  
 
   
   async signToken(

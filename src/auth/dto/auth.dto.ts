@@ -19,7 +19,15 @@ export class AuthDto{
 
   @IsString()
   @IsOptional()
+  firstName: string;
+
+  @IsString()
+  @IsOptional()
   LastName: string;
+
+  @IsString()
+  @IsOptional()
+  lastName: string;
 
   @IsString()
   @IsOptional()

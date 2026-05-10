@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateStaffDto, CreateHotelRoomDto, UpdateRoomStatusDto, ProcessWalkInDto, UpdateHotelRoomDto } from './dto/management.dto';
-import { RoomStatus, BookingStatus } from '@prisma/client';
+import { CreateStaffDto, CreateHotelRoomDto, UpdateRoomStatusDto, ProcessWalkInDto, UpdateHotelRoomDto, ClockInDto, ClockOutDto } from './dto/management.dto';
+import { RoomStatus, BookingStatus, ShiftStatus } from '@prisma/client';
 
 @Injectable()
 export class ManagementService {
@@ -32,11 +32,12 @@ export class ManagementService {
 
   // --- Staff Management ---
   async createStaff(agentId: string, dto: CreateStaffDto) {
+    const { passwordHash, ...staffData } = dto;
     return this.prisma.managementStaff.create({
       data: {
-        ...dto,
+        ...staffData,
         agentId,
-        password: dto.passwordHash, // In real app, hash it
+        password: passwordHash, // In real app, hash it
       },
     });
   }
@@ -160,18 +161,37 @@ export class ManagementService {
       }
     });
 
+    const now = new Date();
     const allRooms = [
-      ...hotelRooms.map(r => ({
-        id: r.id,
-        roomNumber: r.roomNumber,
-        roomName: r.roomName,
-        category: r.category,
-        floor: r.floor,
-        price: r.price,
-        status: r.status,
-        bookings: r.bookings.map(b => ({ id: b.id, start: b.startDate, end: b.endDate })),
-        type: 'HOTEL_ROOM'
-      })),
+      ...hotelRooms.map(r => {
+        // Find if there's an active booking RIGHT NOW
+        const hasActiveBooking = r.bookings.some(b => {
+          const start = new Date(b.startDate);
+          const end = new Date(b.endDate);
+          return now >= start && now <= end;
+        });
+
+        // Determine derived status: 
+        // 1. If Maintenance, stay Maintenance.
+        // 2. If it has an active booking today, it's OCCUPIED.
+        // 3. Otherwise, it's AVAILABLE (even if it was manually set to OCCUPIED before).
+        let derivedStatus = r.status;
+        if (r.status !== 'MAINTENANCE') {
+          derivedStatus = hasActiveBooking ? 'OCCUPIED' : 'AVAILABLE';
+        }
+
+        return {
+          id: r.id,
+          roomNumber: r.roomNumber,
+          roomName: r.roomName,
+          category: r.category,
+          floor: r.floor,
+          price: r.price,
+          status: derivedStatus,
+          bookings: r.bookings.map(b => ({ id: b.id, start: b.startDate, end: b.endDate })),
+          type: 'HOTEL_ROOM'
+        };
+      }),
       ...shortlets.flatMap(s => s.roomOptions.map(opt => ({
         id: opt.id,
         shortletId: s.id,
@@ -251,10 +271,20 @@ export class ManagementService {
       if (room.status !== 'AVAILABLE') throw new BadRequestException("Room is not available for booking");
       if (!room.property.userId) throw new BadRequestException("Property owner missing");
 
-      // Check if the processor is a staff member or the agent themselves
-      const staff = await tx.managementStaff.findUnique({
-        where: { id: userId }
+      // 1. Identify the staff member processing this (from DTO or User Context)
+      const effectiveStaffId = dto.staffId || userId;
+      
+      // 2. Verify an active shift exists for this person
+      const activeShift = await tx.staffShift.findFirst({
+        where: { 
+          staffId: effectiveStaffId, 
+          status: 'ACTIVE' 
+        }
       });
+
+      if (!activeShift) {
+        throw new BadRequestException("No active shift found. You must clock in before processing walk-ins.");
+      }
 
       const booking = await tx.booking.create({
         data: {
@@ -265,7 +295,7 @@ export class ManagementService {
           endDate: new Date(dto.endDate),
           status: 'CONFIRMED',
           isWalkIn: true,
-          processedByStaffId: staff ? userId : null,
+          processedByStaffId: effectiveStaffId,
           payments: {
             create: {
               userId: room.property.userId as string,
@@ -496,6 +526,34 @@ export class ManagementService {
     };
   }
 
+  async checkoutBooking(userId: string, bookingId: string) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { property: true }
+    });
+
+    if (!booking) throw new NotFoundException(`Booking with ID ${bookingId} not found`);
+
+    const hasAccess = await this.verifyAccess(userId, booking.propertyId);
+    if (!hasAccess) throw new ForbiddenException("Unauthorized access to this booking");
+
+    // Update the booking end date to NOW
+    const updatedBooking = await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { endDate: new Date() },
+    });
+
+    // Also reset the room status to AVAILABLE
+    if (booking.hotelRoomId) {
+      await this.prisma.hotelRoom.update({
+        where: { id: booking.hotelRoomId },
+        data: { status: 'AVAILABLE' }
+      });
+    }
+
+    return updatedBooking;
+  }
+
   async getBookings(userId: string) {
     let agentId = userId;
     const staff = await this.prisma.managementStaff.findUnique({ where: { id: userId } });
@@ -517,5 +575,71 @@ export class ManagementService {
       },
       orderBy: { createdAt: 'desc' }
     });
+  }
+
+  // --- Shift Tracking & Presence ---
+  async clockIn(dto: ClockInDto) {
+    const staff = await this.prisma.managementStaff.findUnique({
+      where: { id: dto.staffId }
+    });
+
+    if (!staff) throw new NotFoundException('Staff member not found');
+    
+    // Simple password check (in production use bcrypt)
+    if (staff.password !== dto.password) {
+      throw new ForbiddenException('Invalid staff password');
+    }
+
+    // Check if there's already an active shift for this staff member
+    const activeShift = await this.prisma.staffShift.findFirst({
+      where: { staffId: dto.staffId, status: 'ACTIVE' }
+    });
+
+    if (activeShift) {
+      // If already clocked in, just return the active shift
+      return activeShift;
+    }
+
+    return this.prisma.staffShift.create({
+      data: {
+        staffId: dto.staffId,
+        status: 'ACTIVE',
+        startTime: new Date()
+      }
+    });
+  }
+
+  async clockOut(dto: ClockOutDto) {
+    const activeShift = await this.prisma.staffShift.findFirst({
+      where: { staffId: dto.staffId, status: 'ACTIVE' }
+    });
+
+    if (!activeShift) {
+      throw new BadRequestException('No active shift found for this staff member');
+    }
+
+    return this.prisma.staffShift.update({
+      where: { id: activeShift.id },
+      data: {
+        status: 'COMPLETED',
+        endTime: new Date()
+      }
+    });
+  }
+
+  async getPresence(userId: string) {
+    let agentId = userId;
+    const staff = await this.prisma.managementStaff.findUnique({ where: { id: userId } });
+    if (staff) agentId = staff.agentId;
+
+    const activeShifts = await this.prisma.staffShift.findMany({
+      where: {
+        status: 'ACTIVE',
+        staff: { agentId: agentId }
+      },
+      select: { staffId: true }
+    });
+
+    return activeShifts.map(s => s.staffId);
   }
 }

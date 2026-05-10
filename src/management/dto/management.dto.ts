@@ -109,6 +109,10 @@ export class ProcessWalkInDto {
   @IsString()
   @IsOptional()
   reference?: string;
+
+  @IsString()
+  @IsOptional()
+  staffId?: string;
 }
 
 export class UpdateHotelRoomDto {
@@ -156,4 +160,19 @@ export class UpdateHotelRoomDto {
   @IsObject()
   @IsOptional()
   coords?: any;
+}
+export class ClockInDto {
+  @IsString()
+  @IsNotEmpty()
+  staffId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+}
+
+export class ClockOutDto {
+  @IsString()
+  @IsNotEmpty()
+  staffId: string;
 }

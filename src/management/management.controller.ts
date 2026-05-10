@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { ManagementService } from './management.service';
-import { CreateStaffDto, CreateHotelRoomDto, UpdateRoomStatusDto, ProcessWalkInDto, UpdateHotelRoomDto } from './dto/management.dto';
+import { CreateStaffDto, CreateHotelRoomDto, UpdateRoomStatusDto, ProcessWalkInDto, UpdateHotelRoomDto, ClockInDto, ClockOutDto } from './dto/management.dto';
 import { JwtGuard } from '../auth/guard'; // Assuming JwtGuard exists
 import { Roles } from '../auth/decorator/roles.decorator';
 import { UserRole } from '@prisma/client';
@@ -95,8 +95,31 @@ export class ManagementController {
   }
 
   @UseGuards(JwtGuard)
+  @Post('bookings/:id/checkout')
+  checkout(@Req() req: any, @Param('id') id: string) {
+    return this.managementService.checkoutBooking(req.user.id, id);
+  }
+
+  @UseGuards(JwtGuard)
   @Get('bookings')
   getBookings(@Req() req: any) {
     return this.managementService.getBookings(req.user.id);
+  }
+
+  // --- Shifts & Presence ---
+  @Post('shifts/clock-in')
+  clockIn(@Body() dto: ClockInDto) {
+    return this.managementService.clockIn(dto);
+  }
+
+  @Post('shifts/clock-out')
+  clockOut(@Body() dto: ClockOutDto) {
+    return this.managementService.clockOut(dto);
+  }
+
+  @UseGuards(JwtGuard)
+  @Get('staff/presence')
+  getPresence(@Req() req: any) {
+    return this.managementService.getPresence(req.user.id);
   }
 }
