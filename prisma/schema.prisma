@@ -13,6 +13,8 @@ model EmailVerification {
   code         String
   passwordHash String
   role         UserRole @default(USER)
+  Firstname    String?
+  Lastname     String?
   createdAt    DateTime @default(now())
   expiresAt    DateTime
   attempts     Int      @default(0)
@@ -294,7 +296,25 @@ model ManagementStaff {
   role      StaffRole @default(RECEPTIONIST)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  shifts    StaffShift[] @relation("StaffToShifts")
   bookings  Booking[] @relation("StaffToBooking")
+}
+
+model StaffShift {
+  id        String      @id @default(uuid())
+  staffId   String
+  staff     ManagementStaff @relation("StaffToShifts", fields: [staffId], references: [id], onDelete: Cascade)
+  startTime DateTime    @default(now())
+  endTime   DateTime?
+  status    ShiftStatus @default(ACTIVE)
+  
+  @@index([staffId])
+  @@index([status])
+}
+
+enum ShiftStatus {
+  ACTIVE
+  COMPLETED
 }
 
 enum StaffRole {
