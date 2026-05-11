@@ -30,9 +30,9 @@ export class AuthService {
     private jwt: JwtService,
     private config: ConfigService,
     private mailService: MailService,
-  ) {}
+  ) { }
 
-   async signup(dto: AuthDto) {
+  async signup(dto: AuthDto) {
     const email = dto.email.toLowerCase();
 
     // Check if user already exists
@@ -190,7 +190,8 @@ export class AuthService {
         code,
         attempts: 0,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min expiry
-        lastSentAt: new Date(),      },
+        lastSentAt: new Date(),
+      },
     });
     // Send verification email
     await this.mailService.sendVerificationCode(email, code);
@@ -198,68 +199,68 @@ export class AuthService {
   }
 
   async verifyForgotPasswordCode(dto: VerifySignupDto) {
-  const email = dto.email.toLowerCase();
+    const email = dto.email.toLowerCase();
 
-  const verification = await this.prisma.passwordReset.findFirst({
-    where: {
-      email,
-      code: dto.code,
-      expiresAt: { gt: new Date() },
-    },
-  });
+    const verification = await this.prisma.passwordReset.findFirst({
+      where: {
+        email,
+        code: dto.code,
+        expiresAt: { gt: new Date() },
+      },
+    });
 
-  if (!verification) {
-    const record = await this.prisma.passwordReset.findFirst({ where: { email } });
+    if (!verification) {
+      const record = await this.prisma.passwordReset.findFirst({ where: { email } });
 
-    if (record) {
-      if (record.attempts + 1 >= 5) {
-        await this.prisma.passwordReset.delete({ where: { id: record.id } });
-        throw new ForbiddenException('Too many failed attempts. Please request a new code.');
+      if (record) {
+        if (record.attempts + 1 >= 5) {
+          await this.prisma.passwordReset.delete({ where: { id: record.id } });
+          throw new ForbiddenException('Too many failed attempts. Please request a new code.');
+        }
+
+        await this.prisma.passwordReset.update({
+          where: { id: record.id },
+          data: { attempts: { increment: 1 } },
+        });
       }
 
-      await this.prisma.passwordReset.update({
-        where: { id: record.id },
-        data: { attempts: { increment: 1 } },
-      });
+      throw new ForbiddenException('Invalid or expired code');
     }
 
-    throw new ForbiddenException('Invalid or expired code');
+    // Code is valid — DO NOT update password here
+    return { message: 'Code verified. You may now reset your password.' };
   }
 
-  // Code is valid — DO NOT update password here
-  return { message: 'Code verified. You may now reset your password.' };
-  }
-  
   async resetPassword(email: string, code: string, newPassword: string) {
-  email = email.toLowerCase();
+    email = email.toLowerCase();
 
-  const verification = await this.prisma.passwordReset.findFirst({
-    where: {
-      email,
-      code,
-      expiresAt: { gt: new Date() },
-    },
-  });
+    const verification = await this.prisma.passwordReset.findFirst({
+      where: {
+        email,
+        code,
+        expiresAt: { gt: new Date() },
+      },
+    });
 
-  if (!verification) {
-    throw new ForbiddenException('Invalid or expired reset code');
+    if (!verification) {
+      throw new ForbiddenException('Invalid or expired reset code');
+    }
+
+    const hash = await argon.hash(newPassword);
+
+    const user = await this.prisma.user.update({
+      where: { email },
+      data: { hash },
+    });
+
+
+    // cleanup
+    await this.prisma.passwordReset.delete({
+      where: { id: verification.id },
+    });
+
+    return { message: 'Password reset successful' };
   }
-
-  const hash = await argon.hash(newPassword);
-
-  const user = await this.prisma.user.update({
-    where: { email },
-    data: { hash },
-  });
-  
-
-  // cleanup
-  await this.prisma.passwordReset.delete({
-    where: { id: verification.id },
-  });
-
-  return { message: 'Password reset successful' };
-}
 
 
 
@@ -295,86 +296,86 @@ export class AuthService {
   }
 
   async saveNumber(userId: string, phoneNumber: string) {
-  const exists = await this.prisma.user.findFirst({
-    where: { phoneNumber },
-  });
+    const exists = await this.prisma.user.findFirst({
+      where: { phoneNumber },
+    });
 
-  if (exists) {
-    throw new ForbiddenException('Number has already been used');
+    if (exists) {
+      throw new ForbiddenException('Number has already been used');
+    }
+
+    const code = randomInt(100000, 999999).toString();
+
+    await this.prisma.phoneNumberVerification.create({
+      data: {
+        userId,
+        phoneNumber,
+        code,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        lastSentAt: new Date(),
+        attempts: 0,
+      },
+    });
+
+    await this.mailService.sendVerificationCode(phoneNumber, code);
+
+    return { message: 'Verification code sent to your phone.' };
   }
-
-  const code = randomInt(100000, 999999).toString();
-
-  await this.prisma.phoneNumberVerification.create({
-    data: {
-      userId,
-      phoneNumber,
-      code,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      lastSentAt: new Date(),
-      attempts: 0,
-    },
-  });
-
-  await this.mailService.sendVerificationCode(phoneNumber, code);
-
-  return { message: 'Verification code sent to your phone.' };
-}
 
 
   async verifyPhoneNumber(dto: verifyPhoneNumberDto) {
-  const { phonenumber, code } = dto;
+    const { phonenumber, code } = dto;
 
-  const verification = await this.prisma.phoneNumberVerification.findFirst({
-    where: {
-      phoneNumber: phonenumber,
-      code,
-      expiresAt: { gt: new Date() },
-    },
-  });
-
-  if (!verification) {
-    const record = await this.prisma.phoneNumberVerification.findFirst({
-      where: { phoneNumber: phonenumber },
+    const verification = await this.prisma.phoneNumberVerification.findFirst({
+      where: {
+        phoneNumber: phonenumber,
+        code,
+        expiresAt: { gt: new Date() },
+      },
     });
 
-    if (record) {
-      if (record.attempts + 1 >= 5) {
-        await this.prisma.phoneNumberVerification.delete({
+    if (!verification) {
+      const record = await this.prisma.phoneNumberVerification.findFirst({
+        where: { phoneNumber: phonenumber },
+      });
+
+      if (record) {
+        if (record.attempts + 1 >= 5) {
+          await this.prisma.phoneNumberVerification.delete({
+            where: { id: record.id },
+          });
+          throw new ForbiddenException(
+            'Too many failed attempts. Please request a new code.',
+          );
+        }
+
+        await this.prisma.phoneNumberVerification.update({
           where: { id: record.id },
+          data: { attempts: { increment: 1 } },
         });
-        throw new ForbiddenException(
-          'Too many failed attempts. Please request a new code.',
-        );
       }
 
-      await this.prisma.phoneNumberVerification.update({
-        where: { id: record.id },
-        data: { attempts: { increment: 1 } },
-      });
+      throw new ForbiddenException('Invalid or expired code');
     }
 
-    throw new ForbiddenException('Invalid or expired code');
+    //  Update existing user
+    const user = await this.prisma.user.update({
+      where: { id: verification.userId },
+      data: {
+        phoneNumber: verification.phoneNumber,
+        verified: true,
+      },
+    });
+
+    // Cleanup
+    await this.prisma.phoneNumberVerification.delete({
+      where: { id: verification.id },
+    });
+
+    return { message: 'Phone number verified successfully' };
   }
 
-  //  Update existing user
-  const user = await this.prisma.user.update({
-    where: { id: verification.userId },
-    data: {
-      phoneNumber: verification.phoneNumber,
-      verified: true,
-    },
-  });
 
-  // Cleanup
-  await this.prisma.phoneNumberVerification.delete({
-    where: { id: verification.id },
-  });
-
-  return { message: 'Phone number verified successfully'};
-}
-
-  
   async signToken(
     userId: string,
     email: string,
@@ -389,7 +390,7 @@ export class AuthService {
     };
     const jwtSecret = this.config.get<string>('JWT_SECRET');
     const token = await this.jwt.signAsync(payload, {
-      expiresIn: '15m',
+      expiresIn: '1d',
       secret: jwtSecret,
     });
     return {
