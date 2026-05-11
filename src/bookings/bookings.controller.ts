@@ -40,6 +40,12 @@ export class BookingsController {
     return this.bookingsService.getAgentBookings(userId);
   }
 
+  @UseGuards(JwtGuard)
+  @Get('user')
+  getUserBookings(@GetUser('id') userId: string) {
+    return this.bookingsService.getUserBookings(userId);
+  }
+
   @UseGuards(JwtGuard, RolesGuard)
   @Get('admin')
   @Roles('ADMIN')

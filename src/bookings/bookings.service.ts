@@ -285,6 +285,22 @@ export class BookingsService {
     });
   }
 
+  async getUserBookings(userId: string) {
+    return this.prisma.booking.findMany({
+      where: {
+        userId: userId,
+      },
+      include: {
+        property: true,
+        payments: true,
+        hotelRoom: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   async getAllBookings() {
     return this.prisma.booking.findMany({
       include: {
