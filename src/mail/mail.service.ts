@@ -34,9 +34,6 @@ export class MailService {
     });
 
     try {
-      // Use the emailjs object directly.
-      // Ensure you pass the publicKey and privateKey in the options object.
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await emailjs.send(
         this.serviceID,
         this.templateID,
@@ -51,12 +48,32 @@ export class MailService {
         },
       );
     } catch (error: unknown) {
-      // Logging the error for debugging
       console.error('EmailJS error:', error);
-
       throw new InternalServerErrorException(
         'Failed to send verification email',
       );
+    }
+  }
+
+  async sendSupportNotification(ticket: { name: string, email: string, subject: string, message: string }): Promise<void> {
+    try {
+      await emailjs.send(
+        this.serviceID,
+        this.templateID, // Note: You might want a different template for support
+        {
+          from_name: ticket.name,
+          from_email: ticket.email,
+          subject: ticket.subject,
+          message: ticket.message,
+        },
+        {
+          publicKey: this.publicKey,
+          privateKey: this.privateKey,
+        },
+      );
+    } catch (error: unknown) {
+      console.error('EmailJS Support Notification error:', error);
+      // We don't throw here to avoid failing the ticket creation if email fails
     }
   }
 }
