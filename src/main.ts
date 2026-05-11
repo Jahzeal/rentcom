@@ -9,13 +9,7 @@ async function bootstrap() {
   try {
     const app = await NestFactory.create(AppModule);
 
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        transform: true,
-      }),
-    );
-
+    // 1. CORS FIRST (Handles preflights and sets headers before anything else)
     app.use((req: any, res: any, next: any) => {
       res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
       res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH');
@@ -27,6 +21,14 @@ async function bootstrap() {
         next();
       }
     });
+
+    // 2. Global Pipes
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+      }),
+    );
 
     //  SWAGGER SETUP
     const config = new DocumentBuilder()
