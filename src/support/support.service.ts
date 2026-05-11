@@ -15,6 +15,7 @@ export class SupportService {
       data: {
         name: dto.name,
         email: dto.email,
+        phone: dto.phone || null,
         subject: dto.subject,
         message: dto.message,
         userId: dto.userId || null,
@@ -62,6 +63,13 @@ export class SupportService {
     return this.prisma.supportTicket.update({
       where: { id },
       data: { status },
+    });
+  }
+  
+  async getUserTickets(email: string) {
+    return this.prisma.supportTicket.findMany({
+      where: { email },
+      orderBy: { createdAt: 'desc' },
     });
   }
 }

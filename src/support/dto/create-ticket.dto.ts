@@ -12,6 +12,11 @@ export class CreateTicketDto {
   @IsNotEmpty()
   email: string;
 
+  @ApiPropertyOptional({ example: '+234 800 123 4567' })
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
   @ApiProperty({ example: 'Payment Issue' })
   @IsString()
   @IsNotEmpty()
