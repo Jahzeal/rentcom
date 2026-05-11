@@ -18,6 +18,7 @@ import { EnscrollModule } from './enscroll/enscroll.module';
 import { ShortletsModule } from './shortlets/shortlets.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ManagementModule } from './management/management.module';
+import { SupportModule } from './support/support.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ManagementModule } from './management/management.module';
     ShortletsModule,
     NotificationsModule,
     ManagementModule,
+    SupportModule,
   ],
   controllers: [AppController],
   providers: [AppService],
