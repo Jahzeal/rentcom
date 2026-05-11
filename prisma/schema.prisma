@@ -355,6 +355,7 @@ model SupportTicket {
   userId    String?
   name      String
   email     String
+  phone     String?
   subject   String
   message   String
   status    TicketStatus   @default(OPEN)

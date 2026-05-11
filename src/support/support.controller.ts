@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -47,5 +48,11 @@ export class SupportController {
   @Patch('tickets/:id/status')
   updateTicketStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.supportService.updateTicketStatus(id, status);
+  }
+
+  @ApiOperation({ summary: 'Get tickets for a specific email' })
+  @Get('my-tickets')
+  getMyTickets(@Query('email') email: string) {
+    return this.supportService.getUserTickets(email);
   }
 }
