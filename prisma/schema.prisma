@@ -72,6 +72,11 @@ model User {
   hotelLocation      String?
   hotelCoords        Json?
   hotelCategories    String[]
+  checkoutTime       String?
+  bankName           String?
+  accountName        String?
+  accountNumber      String?
+
   phoneVerifications PhoneNumberVerification[]
   properties         Property[]
   pushSubscriptions  PushSubscription[]
@@ -273,6 +278,7 @@ enum BookingStatus {
   PENDING
   CONFIRMED
   CANCELLED
+  CHECKED_OUT
 }
 
 enum RentalStatus {

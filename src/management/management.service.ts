@@ -426,7 +426,11 @@ export class ManagementService {
         hotelAddress: true,
         hotelLocation: true,
         hotelCoords: true,
-        hotelCategories: true
+        hotelCategories: true,
+        checkoutTime: true,
+        bankName: true,
+        accountName: true,
+        accountNumber: true
       }
     });
   }
@@ -440,6 +444,10 @@ export class ManagementService {
         hotelLocation: dto.hotelLocation,
         hotelCoords: dto.hotelCoords,
         hotelCategories: dto.hotelCategories,
+        checkoutTime: dto.checkoutTime,
+        bankName: dto.bankName,
+        accountName: dto.accountName,
+        accountNumber: dto.accountNumber,
       }
     });
   }
@@ -540,7 +548,10 @@ export class ManagementService {
     // Update the booking end date to NOW
     const updatedBooking = await this.prisma.booking.update({
       where: { id: bookingId },
-      data: { endDate: new Date() },
+      data: { 
+        endDate: new Date(),
+        status: 'CHECKED_OUT'
+      },
     });
 
     // Also reset the room status to AVAILABLE
