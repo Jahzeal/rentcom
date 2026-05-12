@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export class SocialLoginDto {
   @IsString()
@@ -7,6 +7,7 @@ export class SocialLoginDto {
   token: string;    // idToken, accessToken, identityToken
 
   @IsString()
+  @IsOptional()
   role?: string;
 
   @IsString()
