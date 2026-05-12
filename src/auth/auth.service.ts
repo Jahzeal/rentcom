@@ -424,9 +424,35 @@ export class AuthService {
   }
   //social media
 
+  async verifyFacebookToken(token: string): Promise<{ email: string; firstName: string; lastName: string; picture?: string }> {
+    try {
+      const res = await fetch(`https://graph.facebook.com/me?fields=email,first_name,last_name,picture&access_token=${token}`);
+      if (!res.ok) throw new BadRequestException('Failed to fetch user info from Facebook');
+
+      const payload = await res.json();
+      if (!payload || !payload.email) throw new BadRequestException('Invalid Facebook token or email missing');
+
+      return {
+        email: payload.email,
+        firstName: payload.first_name || '',
+        lastName: payload.last_name || '',
+        picture: payload.picture?.data?.url,
+      };
+    } catch (error) {
+      throw new BadRequestException(error.message || 'Facebook token verification failed');
+    }
+  }
+
   async socialLogin(dto: SocialLoginDto) {
-    // 1. Verify provider token (Google, etc.)
-    const profile = await this.verifySocialToken(dto.token);
+    // 1. Verify provider token based on provider type
+    let profile;
+    if (dto.provider === 'google') {
+      profile = await this.verifySocialToken(dto.token);
+    } else if (dto.provider === 'facebook') {
+      profile = await this.verifyFacebookToken(dto.token);
+    } else {
+      throw new BadRequestException('Unsupported social provider');
+    }
 
     // 2. Check if user exists
     let user = await this.prisma.user.findUnique({
