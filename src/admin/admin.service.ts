@@ -169,6 +169,7 @@ export class AdminService {
         include: {
           user: true,
           property: true,
+          payments: true,
         },
         orderBy: { createdAt: 'desc' },
         take: 10,
@@ -185,10 +186,11 @@ export class AdminService {
     ]);
 
     const notifications = [
-      ...bookings.map((b) => ({
+      ...bookings.map((b: any) => ({
         id: `booking-${b.id}`,
         title: b.status === 'CONFIRMED' ? 'Payment Confirmed' : 'New Booking Request',
         message: `${this.getUserDisplayName(b.user)} booked ${b.property.title}. Status: ${b.status}`,
+        amount: b.payments?.[0]?.amount || 0,
         createdAt: b.createdAt,
         read: b.status === 'CONFIRMED',
         type: b.status === 'CONFIRMED' ? 'info' : 'alert',
