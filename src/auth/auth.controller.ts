@@ -60,6 +60,7 @@ export class AuthController {
 
 
 
+  @Post('google')
   @Post('social-login')
   socialLogin(@Body() dto: SocialLoginDto) {
     return this.authService.socialLogin(dto);
