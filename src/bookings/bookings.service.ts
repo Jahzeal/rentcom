@@ -45,6 +45,7 @@ export class BookingsService {
           status: 'AVAILABLE',
           bookings: {
             none: {
+              status: { in: ['CONFIRMED', 'PENDING'] },
               OR: [
                 { AND: [{ startDate: { lte: start } }, { endDate: { gt: start } }] },
                 { AND: [{ startDate: { lt: end } }, { endDate: { gte: end } }] },
@@ -63,6 +64,7 @@ export class BookingsService {
             NOT: { category: roomType },
             bookings: {
               none: {
+                status: { in: ['CONFIRMED', 'PENDING'] },
                 OR: [
                   { AND: [{ startDate: { lte: start } }, { endDate: { gt: start } }] },
                   { AND: [{ startDate: { lt: end } }, { endDate: { gte: end } }] },
@@ -102,6 +104,7 @@ export class BookingsService {
     const existingBooking = await this.prisma.booking.findFirst({
         where: {
             propertyId,
+            status: { in: ['CONFIRMED', 'PENDING'] },
             OR: [
                 { AND: [{ startDate: { lte: start } }, { endDate: { gt: start } }] },
                 { AND: [{ startDate: { lt: end } }, { endDate: { gte: end } }] },
@@ -155,6 +158,7 @@ export class BookingsService {
           status: 'AVAILABLE',
           bookings: {
             none: {
+              status: { in: ['CONFIRMED', 'PENDING'] },
               OR: [
                 {
                   AND: [
@@ -189,6 +193,7 @@ export class BookingsService {
             NOT: { category: dto.roomType },
             bookings: {
               none: {
+                status: { in: ['CONFIRMED', 'PENDING'] },
                 OR: [
                   {
                     AND: [
