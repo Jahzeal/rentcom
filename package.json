@@ -46,6 +46,7 @@
     "dotenv": "^17.2.3",
     "emailjs": "^5.0.0",
     "emailjs-com": "^3.2.0",
+    "google-auth-library": "^10.6.2",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",

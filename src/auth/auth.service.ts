@@ -20,17 +20,42 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { UserRole } from '@prisma/client';
 import { randomInt } from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class AuthService {
-  verifySocialToken: any;
+  private googleClient: OAuth2Client;
+  
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
     private mailService: MailService,
-  ) { }
+  ) {
+    this.googleClient = new OAuth2Client(this.config.get<string>('GOOGLE_CLIENT_ID'));
+  }
+
+  async verifySocialToken(token: string): Promise<{ email: string; firstName: string; lastName: string; picture?: string }> {
+    try {
+      // Since we are now using useGoogleLogin on the frontend, we get an access_token
+      // We'll use this to fetch the user profile from Google's userinfo endpoint
+      const res = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${token}`);
+      if (!res.ok) throw new BadRequestException('Failed to fetch user info from Google');
+
+      const payload = await res.json();
+      if (!payload || !payload.email) throw new BadRequestException('Invalid Google token or email missing');
+
+      return {
+        email: payload.email,
+        firstName: payload.given_name || payload.name?.split(' ')[0] || '',
+        lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
+        picture: payload.picture,
+      };
+    } catch (error) {
+      throw new BadRequestException(error.message || 'Google token verification failed');
+    }
+  }
 
   async signup(dto: AuthDto) {
     const email = dto.email.toLowerCase();
@@ -400,32 +425,35 @@ export class AuthService {
   //social media
 
   async socialLogin(dto: SocialLoginDto) {
-    // Verify provider token (Google, Facebook, Apple)
-    // Extract user email & profile
+    // 1. Verify provider token (Google, etc.)
+    const profile = await this.verifySocialToken(dto.token);
 
-    const profile = await this.verifySocialToken(dto);
-
-    // check if user exists
+    // 2. Check if user exists
     let user = await this.prisma.user.findUnique({
       where: { email: profile.email },
     });
 
+    // 3. Create user if they don't exist
     if (!user) {
-      const hash = await argon.hash(Math.random().toString());
+      // For social logins, we generate a random dummy hash since they won't use a password
+      const randomPassword = randomInt(10000000, 99999999).toString();
+      const hash = await argon.hash(randomPassword);
+
       user = await this.prisma.user.create({
         data: {
           email: profile.email,
           hash,
           Firstname: profile.firstName,
           Lastname: profile.lastName,
+          role: (dto.role as UserRole) || UserRole.USER,
+          isManagement: false,
+          verified: true, // Social accounts are pre-verified
         },
       });
     }
 
-    return {
-      message: 'social login success',
-      user,
-    };
+    // 4. Return signed token
+    return this.signToken(user.id, user.email, user.role, user.isManagement);
   }
 
 

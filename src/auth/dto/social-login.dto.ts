@@ -9,4 +9,7 @@ export class SocialLoginDto {
   @IsString()
   @IsNotEmpty()
   token: string;    // idToken, accessToken, identityToken
+
+  @IsString()
+  role?: string;
 }
