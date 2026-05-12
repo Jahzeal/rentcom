@@ -62,6 +62,31 @@ export class AdminService {
       pending: bookingStats.find((s) => s.status === 'PENDING')?._count._all || 0,
     };
 
+    // --- CALCULATE TRENDS ---
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const currentMonth = new Date().getMonth();
+    const last6Months: { name: string; value: number }[] = [];
+    
+    for (let i = 5; i >= 0; i--) {
+      const targetMonth = (currentMonth - i + 12) % 12;
+      const targetYear = new Date().getFullYear() - (currentMonth - i < 0 ? 1 : 0);
+      
+      const startDate = new Date(targetYear, targetMonth, 1);
+      const endDate = new Date(targetYear, targetMonth + 1, 0);
+
+      const count = await this.prisma.booking.count({
+        where: {
+          ...relatedFilter,
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          }
+        }
+      });
+
+      last6Months.push({ name: months[targetMonth], value: count });
+    }
+
     const propertyCounts = {
       shortlets: propertyTypeStats.find((s) => s.type === 'ShortLET')?._count._all || 0,
       hostels: propertyTypeStats.find((s) => s.type === 'Hostels')?._count._all || 0,
@@ -75,6 +100,7 @@ export class AdminService {
       bookingCount,
       tours,
       bookings,
+      trends: last6Months,
       propertyCounts,
     };
   }
