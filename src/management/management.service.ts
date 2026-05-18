@@ -588,6 +588,29 @@ export class ManagementService {
     });
   }
 
+  async getTransactions(userId: string) {
+    let agentId = userId;
+    const staff = await this.prisma.managementStaff.findUnique({ where: { id: userId } });
+    if (staff) agentId = staff.agentId;
+
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        booking: { property: { userId: agentId, deletedAt: null } }
+      },
+      include: { booking: { include: { hotelRoom: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return payments.map(p => ({
+      id: p.id,
+      amount: p.amount,
+      date: p.createdAt,
+      room: p.booking?.hotelRoom?.roomNumber || 'N/A',
+      status: p.status,
+      reference: p.reference
+    }));
+  }
+
   // --- Shift Tracking & Presence ---
   async clockIn(dto: ClockInDto) {
     const staff = await this.prisma.managementStaff.findUnique({

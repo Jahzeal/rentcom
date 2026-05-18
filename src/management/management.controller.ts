@@ -106,6 +106,12 @@ export class ManagementController {
     return this.managementService.getBookings(req.user.id);
   }
 
+  @UseGuards(JwtGuard)
+  @Get('transactions')
+  getTransactions(@Req() req: any) {
+    return this.managementService.getTransactions(req.user.id);
+  }
+
   // --- Shifts & Presence ---
   @Post('shifts/clock-in')
   clockIn(@Body() dto: ClockInDto) {
