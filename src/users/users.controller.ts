@@ -90,8 +90,12 @@ export class UserController {
     return this.usersService.getAllUserRequestApplied(userid);
   }
 
-  @Post('subscribe-management')
-  subscribeManagement(@GetUser('id') userId: string) {
-    return this.usersService.subscribeManagement(userId);
+  @Post('subscribe-management/confirm')
+  confirmSubscription(
+    @GetUser('id') userId: string,
+    @Body('reference') reference: string,
+    @Body('planName') planName: string,
+  ) {
+    return this.usersService.confirmSubscription(userId, reference, planName);
   }
 }

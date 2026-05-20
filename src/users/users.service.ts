@@ -214,10 +214,47 @@ export class UsersService {
     });
   }
   
-  async subscribeManagement(userId: string) {
-    return this.prisma.user.update({
+
+  /**
+   * Verifies a Paystack payment reference (server-to-server) before
+   * activating the management subscription for the agent.
+   */
+  async confirmSubscription(userId: string, reference: string, planName: string) {
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    if (!secretKey || secretKey === 'sk_test_your_secret_key_here') {
+      throw new Error('Paystack secret key is not configured on the server.');
+    }
+
+    // 1. Verify the transaction reference with Paystack
+    const response = await fetch(
+      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    const result = await response.json();
+
+    if (!result.status || result.data?.status !== 'success') {
+      throw new BadRequestException(
+        `Payment verification failed. Paystack status: ${result.data?.status ?? 'unknown'}`,
+      );
+    }
+
+    // 2. Activate the subscription
+    const updatedUser = await this.prisma.user.update({
       where: { id: userId },
-      data: { isManagement: true }
+      data: { isManagement: true },
     });
+
+    return {
+      message: `${planName} plan activated successfully`,
+      user: updatedUser,
+    };
   }
 }
+
