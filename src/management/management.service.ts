@@ -115,6 +115,8 @@ export class ManagementService {
       }
 
       return hotelRooms[0];
+    }, {
+      timeout: 15000
     });
   }
 
@@ -313,6 +315,8 @@ export class ManagementService {
       });
 
       return booking;
+    }, {
+      timeout: 15000
     });
   }
 
@@ -355,6 +359,8 @@ export class ManagementService {
           amenities: dto.amenities,
         }
       });
+    }, {
+      timeout: 15000
     });
   }
 

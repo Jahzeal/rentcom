@@ -82,6 +82,7 @@ model User {
   pushSubscriptions  PushSubscription[]
   staffAccounts      ManagementStaff[]         @relation("AgentToStaff")
   supportTickets     SupportTicket[]
+  reviews            Review[]
 }
 
 model PushSubscription {
@@ -135,6 +136,7 @@ model Property {
   userId           String?
   user             User?              @relation(fields: [userId], references: [id])
   hotelRooms       HotelRoom[]
+  reviews          Review[]
 
   @@index([deletedAt])
 }
@@ -186,6 +188,7 @@ model Booking {
   staff             ManagementStaff? @relation("StaffToBooking", fields: [processedByStaffId], references: [id])
   hotelRoomId       String?
   hotelRoom         HotelRoom? @relation("RoomToBooking", fields: [hotelRoomId], references: [id], onDelete: Cascade)
+  review            Review?
 
   @@index([propertyId])
   @@index([hotelRoomId])
@@ -383,4 +386,21 @@ enum TicketPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  userId     String
+  propertyId String
+  bookingId  String?  @unique
+  rating     Int      // 1 to 5 stars
+  comment    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  booking    Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId])
 }
