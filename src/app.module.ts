@@ -19,6 +19,7 @@ import { ShortletsModule } from './shortlets/shortlets.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ManagementModule } from './management/management.module';
 import { SupportModule } from './support/support.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { SupportModule } from './support/support.module';
     NotificationsModule,
     ManagementModule,
     SupportModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
