@@ -312,7 +312,11 @@ export class BookingsService {
         property: {
           include: {
             user: {
-              select: { hotelName: true }
+              select: { 
+                id: true,
+                hotelName: true,
+                isManagement: true 
+              }
             }
           }
         },

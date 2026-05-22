@@ -76,6 +76,7 @@ model User {
   bankName           String?
   accountName        String?
   accountNumber      String?
+  profileImage       String?
 
   phoneVerifications PhoneNumberVerification[]
   properties         Property[]

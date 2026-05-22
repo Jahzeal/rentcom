@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
 import { ManagementService } from './management.service';
 import { CreateStaffDto, CreateHotelRoomDto, UpdateRoomStatusDto, ProcessWalkInDto, UpdateHotelRoomDto, ClockInDto, ClockOutDto } from './dto/management.dto';
 import { JwtGuard } from '../auth/guard'; // Assuming JwtGuard exists
@@ -8,6 +8,21 @@ import { UserRole } from '@prisma/client';
 @Controller('management')
 export class ManagementController {
   constructor(private readonly managementService: ManagementService) { }
+
+  @UseGuards(JwtGuard)
+  @Get('banks')
+  getBanks() {
+    return this.managementService.getBanks();
+  }
+
+  @UseGuards(JwtGuard)
+  @Get('resolve-bank')
+  resolveBank(
+    @Query('account_number') accountNumber: string,
+    @Query('bank_code') bankCode: string,
+  ) {
+    return this.managementService.resolveBank(accountNumber, bankCode);
+  }
 
   // --- Staff Management (Agent Only) ---
   @UseGuards(JwtGuard)

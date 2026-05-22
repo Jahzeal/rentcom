@@ -17,11 +17,25 @@ export class UsersService {
   async editUser(userId: string, dto: editUserDto) {
     const data: any = { ...dto };
     if (dto.password) {
+      if (!dto.currentPassword) {
+        throw new BadRequestException('Current password is required to change password');
+      }
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      const isMatch = await argon.verify(user.hash, dto.currentPassword);
+      if (!isMatch) {
+        throw new BadRequestException('Current password is incorrect');
+      }
       // Hash the password using argon2
       const hashedPassword = await argon.hash(dto.password);
       data.hash = hashedPassword;
       delete data.password;
     }
+    delete data.currentPassword;
     try {
       return await this.prisma.user.update({
         where: { id: userId },
