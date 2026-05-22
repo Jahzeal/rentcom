@@ -682,4 +682,53 @@ export class ManagementService {
 
     return activeShifts.map(s => s.staffId);
   }
+
+  async resolveBank(accountNumber: string, bankCode: string) {
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    if (!secretKey) {
+      throw new BadRequestException('Paystack secret key is not configured.');
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.paystack.co/bank/resolve?account_number=${encodeURIComponent(
+          accountNumber,
+        )}&bank_code=${encodeURIComponent(bankCode)}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${secretKey}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      const data = await response.json();
+      if (!response.ok || !data.status) {
+        throw new BadRequestException(
+          data.message || 'Failed to resolve bank account.',
+        );
+      }
+
+      return data.data;
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException('Failed to verify bank details with Paystack.');
+    }
+  }
+
+  async getBanks() {
+    try {
+      const response = await fetch('https://api.paystack.co/bank?country=nigeria', {
+        method: 'GET',
+      });
+      const data = await response.json();
+      if (!response.ok || !data.status) {
+        throw new BadRequestException('Failed to fetch banks list.');
+      }
+      return data.data;
+    } catch (error) {
+      throw new BadRequestException('Failed to load banks.');
+    }
+  }
 }

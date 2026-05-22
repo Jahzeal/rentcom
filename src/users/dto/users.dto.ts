@@ -16,6 +16,14 @@ export class editUserDto {
   @IsString()
   @IsOptional()
   password?: string;
+
+  @IsString()
+  @IsOptional()
+  profileImage?: string;
+
+  @IsString()
+  @IsOptional()
+  currentPassword?: string;
 }
 
 export class RequestTourDto {
