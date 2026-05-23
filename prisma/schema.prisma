@@ -78,6 +78,12 @@ model User {
   accountNumber      String?
   profileImage       String?
 
+  emailNotifications  Boolean                   @default(true)
+  savedListingsAlerts Boolean                   @default(true)
+  marketUpdatesAlerts Boolean                   @default(true)
+  rennantNewsAlerts   Boolean                   @default(false)
+  messagesAlerts      Boolean                   @default(true)
+
   phoneVerifications PhoneNumberVerification[]
   properties         Property[]
   pushSubscriptions  PushSubscription[]
