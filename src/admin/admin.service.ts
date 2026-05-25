@@ -220,14 +220,18 @@ export class AdminService {
         createdAt: b.createdAt,
         read: b.status === 'CONFIRMED',
         type: b.status === 'CONFIRMED' ? 'info' : 'alert',
+        email: b.user?.email || null,
+        phone: b.user?.phone || null,
       })),
-      ...tourRequests.map((t) => ({
+      ...tourRequests.map((t: any) => ({
         id: `tour-${t.id}`,
         title: 'New Tour Request',
         message: `${this.getUserDisplayName(t.user)} requested a tour for ${t.property.title}. Status: ${t.status}`,
         createdAt: t.requestedAt,
         read: t.status === 'COMPLETED',
         type: 'alert',
+        email: t.user?.email || null,
+        phone: t.user?.phone || null,
       })),
     ];
 

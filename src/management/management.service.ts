@@ -136,6 +136,7 @@ export class ManagementService {
         property: { select: { title: true, address: true, location: true, images: true } },
         bookings: {
           where: {
+            status: 'CONFIRMED',
             endDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
           }
         }
@@ -156,7 +157,11 @@ export class ManagementService {
             address: true,
             location: true,
             images: true,
-            bookings: true
+            bookings: {
+              where: {
+                status: 'CONFIRMED'
+              }
+            }
           }
         },
         roomOptions: true

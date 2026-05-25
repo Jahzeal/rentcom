@@ -119,16 +119,32 @@ export class PaymentsService {
       data: { status: 'CONFIRMED' },
     });
 
-    // --- Step 5: Create the Payment record with real data from Paystack ---
-    const payment = await this.prisma.payment.create({
-      data: {
-        userId: booking.user.id,
-        bookingId: booking.id,
-        amount: amountInNaira,
-        status: 'SUCCESS',
-        reference: reference,
-      },
+    // --- Step 5: Update the existing PENDING Payment record or create a new one with real data from Paystack ---
+    const pendingPayment = await this.prisma.payment.findFirst({
+      where: { bookingId: booking.id, status: 'PENDING' },
     });
+
+    let payment;
+    if (pendingPayment) {
+      payment = await this.prisma.payment.update({
+        where: { id: pendingPayment.id },
+        data: {
+          amount: amountInNaira,
+          status: 'SUCCESS',
+          reference: reference,
+        },
+      });
+    } else {
+      payment = await this.prisma.payment.create({
+        data: {
+          userId: booking.user.id,
+          bookingId: booking.id,
+          amount: amountInNaira,
+          status: 'SUCCESS',
+          reference: reference,
+        },
+      });
+    }
 
     // --- Step 6: Notify the property agent via WebSocket ---
     const agentId = booking.property.userId ?? '';
