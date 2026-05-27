@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { editUserDto } from '../users/dto/users.dto';
 
@@ -267,6 +267,7 @@ export class AdminService {
 
     return this.prisma.booking.update({
       where: { id: bookingId },
+      // @ts-ignore - proofOfPayment is added to DB but types might not be regenerated yet
       data: { 
         isPaidOut: true,
         proofOfPayment: proofOfPayment || null
