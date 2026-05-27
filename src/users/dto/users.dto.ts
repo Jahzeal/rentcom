@@ -44,6 +44,18 @@ export class editUserDto {
   @IsBoolean()
   @IsOptional()
   messagesAlerts?: boolean;
+
+  @IsString()
+  @IsOptional()
+  bankName?: string;
+
+  @IsString()
+  @IsOptional()
+  accountName?: string;
+
+  @IsString()
+  @IsOptional()
+  accountNumber?: string;
 }
 
 export class RequestTourDto {
