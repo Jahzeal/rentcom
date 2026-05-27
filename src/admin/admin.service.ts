@@ -189,7 +189,7 @@ export class AdminService {
   async getNotifications(user: any) {
     const relatedFilter = user.role === 'AGENT' ? { property: { userId: user.id } } : {};
 
-    const [bookings, tourRequests] = await Promise.all([
+    const [bookings, tourRequests, unsuccessfulAgents] = await Promise.all([
       this.prisma.booking.findMany({
         where: relatedFilter,
         include: {
@@ -209,6 +209,13 @@ export class AdminService {
         orderBy: { requestedAt: 'desc' },
         take: 10,
       }),
+      user.role === 'ADMIN' 
+        ? this.prisma.user.findMany({
+            where: { role: 'AGENT', isManagement: false },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+          })
+        : Promise.resolve([]),
     ]);
 
     const notifications = [
@@ -221,7 +228,7 @@ export class AdminService {
         read: b.status === 'CONFIRMED',
         type: b.status === 'CONFIRMED' ? 'info' : 'alert',
         email: b.user?.email || null,
-        phone: b.user?.phone || null,
+        phone: b.user?.phoneNumber || b.user?.phone || null,
       })),
       ...tourRequests.map((t: any) => ({
         id: `tour-${t.id}`,
@@ -231,7 +238,18 @@ export class AdminService {
         read: t.status === 'COMPLETED',
         type: 'alert',
         email: t.user?.email || null,
-        phone: t.user?.phone || null,
+        phone: t.user?.phoneNumber || t.user?.phone || null,
+      })),
+      ...unsuccessfulAgents.map((u: any) => ({
+        id: `unsub-${u.id}`,
+        title: 'Unsuccessful Subscription',
+        message: `${this.getUserDisplayName(u)} signed up as an Agent but did not complete the subscription.`,
+        amount: 0,
+        createdAt: u.createdAt,
+        read: false,
+        type: 'subscription',
+        email: u.email || null,
+        phone: u.phoneNumber || u.phone || null,
       })),
     ];
 
