@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtGuard } from 'src/auth/guard';
@@ -29,8 +30,8 @@ export class BookingsController {
   }
 
   @Get('property/:id/reserved-dates')
-  getReservedDates(@Param('id') id: string) {
-    return this.bookingsService.getReservedDates(id);
+  getReservedDates(@Param('id') id: string, @Query('category') category?: string) {
+    return this.bookingsService.getReservedDates(id, category);
   }
 
   @UseGuards(JwtGuard, RolesGuard)

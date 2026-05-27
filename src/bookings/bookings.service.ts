@@ -10,7 +10,66 @@ import { CreateBookingDto } from './dto/booking.dto';
 export class BookingsService {
   constructor(private prisma: PrismaService) {}
 
-  async getReservedDates(propertyId: string) {
+  async getReservedDates(propertyId: string, category?: string) {
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { type: true },
+    });
+
+    if (!property) return [];
+
+    if (property.type === 'HOTEL_ROOM' && category) {
+      const rooms = await this.prisma.hotelRoom.findMany({
+        where: {
+          propertyId,
+          category,
+          NOT: { status: 'MAINTENANCE' },
+        },
+        select: { id: true },
+      });
+
+      const totalRooms = rooms.length;
+      if (totalRooms === 0) return [];
+
+      const bookings = await this.prisma.booking.findMany({
+        where: {
+          propertyId,
+          hotelRoomId: { in: rooms.map(r => r.id) },
+          status: { in: ['CONFIRMED', 'PENDING'] },
+        },
+        select: {
+          startDate: true,
+          endDate: true,
+        },
+      });
+
+      const dayCounts: Record<string, number> = {};
+      for (const booking of bookings) {
+        const start = new Date(booking.startDate);
+        const end = new Date(booking.endDate);
+        
+        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+          const dateStr = d.toISOString().split('T')[0];
+          dayCounts[dateStr] = (dayCounts[dateStr] || 0) + 1;
+        }
+      }
+
+      const reservedRanges: { startDate: string; endDate: string }[] = [];
+      for (const [dateStr, count] of Object.entries(dayCounts)) {
+        if (count >= totalRooms) {
+          const nextDay = new Date(dateStr);
+          nextDay.setDate(nextDay.getDate() + 1);
+          
+          reservedRanges.push({
+            startDate: new Date(dateStr).toISOString(),
+            endDate: nextDay.toISOString(),
+          });
+        }
+      }
+
+      return reservedRanges;
+    }
+
     const bookings = await this.prisma.booking.findMany({
       where: {
         propertyId,
@@ -42,7 +101,7 @@ export class BookingsService {
         where: {
           propertyId,
           category: roomType,
-          status: 'AVAILABLE',
+          NOT: { status: 'MAINTENANCE' },
           bookings: {
             none: {
               status: { in: ['CONFIRMED', 'PENDING'] },
@@ -60,8 +119,8 @@ export class BookingsService {
         const alternatives = await this.prisma.hotelRoom.findMany({
           where: {
             propertyId,
-            status: 'AVAILABLE',
-            NOT: { category: roomType },
+            category: { not: roomType },
+            NOT: { status: 'MAINTENANCE' },
             bookings: {
               none: {
                 status: { in: ['CONFIRMED', 'PENDING'] },
@@ -155,7 +214,7 @@ export class BookingsService {
         where: {
           propertyId: propertyId,
           category: dto.roomType, // Filter by guest's preferred category
-          status: 'AVAILABLE',
+          NOT: { status: 'MAINTENANCE' },
           bookings: {
             none: {
               status: { in: ['CONFIRMED', 'PENDING'] },
@@ -189,8 +248,8 @@ export class BookingsService {
         const otherAvailableCategories = await this.prisma.hotelRoom.findMany({
           where: {
             propertyId: propertyId,
-            status: 'AVAILABLE',
-            NOT: { category: dto.roomType },
+            category: { not: dto.roomType },
+            NOT: { status: 'MAINTENANCE' },
             bookings: {
               none: {
                 status: { in: ['CONFIRMED', 'PENDING'] },

@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEmail, IsOptional, IsString } from 'class-validator';
 
 export class editUserDto {
   @IsEmail()
@@ -24,6 +24,26 @@ export class editUserDto {
   @IsString()
   @IsOptional()
   currentPassword?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  emailNotifications?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  savedListingsAlerts?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  marketUpdatesAlerts?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  rennantNewsAlerts?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  messagesAlerts?: boolean;
 }
 
 export class RequestTourDto {

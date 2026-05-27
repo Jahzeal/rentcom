@@ -201,8 +201,8 @@ export class ShortletsService {
     }
 
     async updateShortlet(id: string, dto: UpdateShortletDto) {
-        const shortlet = await this.prisma.shortlet.findUnique({
-            where: { id },
+        const shortlet = await this.prisma.shortlet.findFirst({
+            where: { OR: [{ id }, { propertyId: id }] },
             include: { property: true },
         });
 
@@ -242,12 +242,12 @@ export class ShortletsService {
             });
         }
 
-        return this.getShortletById(id);
+        return this.getShortletById(shortlet.id);
     }
 
     async addRoomOption(shortletId: string, dto: CreateRoomOptionDto) {
-        const shortlet = await this.prisma.shortlet.findUnique({
-            where: { id: shortletId },
+        const shortlet = await this.prisma.shortlet.findFirst({
+            where: { OR: [{ id: shortletId }, { propertyId: shortletId }] },
         });
 
         if (!shortlet) {
@@ -256,7 +256,7 @@ export class ShortletsService {
 
         const roomOption = await this.prisma.roomOption.create({
             data: {
-                shortletId,
+                shortletId: shortlet.id,
                 name: dto.name,
                 beds: dto.beds,
                 price: dto.price,
@@ -266,7 +266,7 @@ export class ShortletsService {
             },
         });
 
-        await this.syncPropertySummary(shortletId);
+        await this.syncPropertySummary(shortlet.id);
         return roomOption;
     }
 
@@ -275,10 +275,18 @@ export class ShortletsService {
         roomId: string,
         dto: UpdateRoomOptionDto,
     ) {
+        const shortlet = await this.prisma.shortlet.findFirst({
+            where: { OR: [{ id: shortletId }, { propertyId: shortletId }] },
+        });
+
+        if (!shortlet) {
+            throw new NotFoundException('Shortlet not found');
+        }
+
         const roomOption = await this.prisma.roomOption.findFirst({
             where: {
                 id: roomId,
-                shortletId,
+                shortletId: shortlet.id,
             },
         });
 
@@ -293,15 +301,23 @@ export class ShortletsService {
             },
         });
 
-        await this.syncPropertySummary(shortletId);
+        await this.syncPropertySummary(shortlet.id);
         return updated;
     }
 
     async deleteRoomOption(shortletId: string, roomId: string) {
+        const shortlet = await this.prisma.shortlet.findFirst({
+            where: { OR: [{ id: shortletId }, { propertyId: shortletId }] },
+        });
+
+        if (!shortlet) {
+            throw new NotFoundException('Shortlet not found');
+        }
+
         const roomOption = await this.prisma.roomOption.findFirst({
             where: {
                 id: roomId,
-                shortletId,
+                shortletId: shortlet.id,
             },
         });
 
@@ -313,14 +329,14 @@ export class ShortletsService {
             where: { id: roomId },
         });
 
-        await this.syncPropertySummary(shortletId);
+        await this.syncPropertySummary(shortlet.id);
 
         return { message: 'Room option deleted successfully' };
     }
 
     async deleteShortlet(id: string) {
-        const shortlet = await this.prisma.shortlet.findUnique({
-            where: { id },
+        const shortlet = await this.prisma.shortlet.findFirst({
+            where: { OR: [{ id }, { propertyId: id }] },
             include: { property: true },
         });
 
