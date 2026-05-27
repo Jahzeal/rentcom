@@ -267,11 +267,10 @@ export class AdminService {
 
     return this.prisma.booking.update({
       where: { id: bookingId },
-      // @ts-ignore - proofOfPayment is added to DB but types might not be regenerated yet
       data: { 
         isPaidOut: true,
         proofOfPayment: proofOfPayment || null
-      }
+      } as any
     });
   }
 }
