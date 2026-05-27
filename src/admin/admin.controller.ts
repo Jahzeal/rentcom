@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
@@ -68,5 +69,11 @@ export class AdminController {
   @Roles('ADMIN')
   async editUser(@GetId('id') userId: string, @Body() dto: editUserDto) {
     return this.adminService.editUser(userId, dto);
+  }
+
+  @Post('bookings/:id/payout')
+  @Roles('ADMIN')
+  async payoutBooking(@GetId('id') bookingId: string) {
+    return this.adminService.payoutBooking(bookingId);
   }
 }

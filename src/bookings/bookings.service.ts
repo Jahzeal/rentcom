@@ -374,7 +374,10 @@ export class BookingsService {
               select: { 
                 id: true,
                 hotelName: true,
-                isManagement: true 
+                isManagement: true,
+                bankName: true,
+                accountName: true,
+                accountNumber: true
               }
             }
           }

@@ -116,6 +116,12 @@ export class ManagementController {
   }
 
   @UseGuards(JwtGuard)
+  @Post('bookings/:id/checkin')
+  checkin(@Req() req: any, @Param('id') id: string) {
+    return this.managementService.checkinBooking(req.user.id, id);
+  }
+
+  @UseGuards(JwtGuard)
   @Get('bookings')
   getBookings(@Req() req: any) {
     return this.managementService.getBookings(req.user.id);
