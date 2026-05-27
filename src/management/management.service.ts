@@ -545,6 +545,26 @@ export class ManagementService {
     };
   }
 
+  async checkinBooking(userId: string, bookingId: string) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { property: true }
+    });
+
+    if (!booking) throw new NotFoundException(`Booking with ID ${bookingId} not found`);
+
+    const hasAccess = await this.verifyAccess(userId, booking.propertyId);
+    if (!hasAccess) throw new ForbiddenException("Unauthorized access to this booking");
+
+    // @ts-ignore - isCheckedIn is added to Prisma schema but might not be in TS types yet
+    const updatedBooking = await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { isCheckedIn: true },
+    });
+
+    return updatedBooking;
+  }
+
   async checkoutBooking(userId: string, bookingId: string) {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },

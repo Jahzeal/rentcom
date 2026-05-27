@@ -257,4 +257,20 @@ export class AdminService {
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
     );
   }
+
+  async payoutBooking(bookingId: string) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId }
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Booking with ID ${bookingId} not found`);
+    }
+
+    // @ts-ignore - isPaidOut might not be in the generated Prisma types yet
+    return this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { isPaidOut: true }
+    });
+  }
 }
