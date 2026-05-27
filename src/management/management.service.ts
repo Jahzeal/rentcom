@@ -489,7 +489,15 @@ export class ManagementService {
     ]);
 
     // 2. Calculate KPIs
-    const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
+    const onlineRevenue = payments
+      .filter(p => p.booking?.isWalkIn !== true)
+      .reduce((sum, p) => sum + p.amount, 0);
+      
+    const walkInRevenue = payments
+      .filter(p => p.booking?.isWalkIn === true)
+      .reduce((sum, p) => sum + p.amount, 0);
+      
+    const totalRevenue = onlineRevenue + walkInRevenue;
     const totalBookings = bookings.length;
     const occupancyRate = rooms.length > 0
       ? (rooms.filter(r => r.status === 'OCCUPIED').length / rooms.length) * 100
@@ -532,6 +540,8 @@ export class ManagementService {
     return {
       kpis: {
         totalRevenue,
+        onlineRevenue,
+        walkInRevenue,
         totalBookings,
         occupancyRate: Math.round(occupancyRate),
         activeRooms: rooms.filter(r => r.status === 'AVAILABLE').length,

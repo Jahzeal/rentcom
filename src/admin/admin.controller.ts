@@ -73,7 +73,7 @@ export class AdminController {
 
   @Post('bookings/:id/payout')
   @Roles('ADMIN')
-  async payoutBooking(@GetId('id') bookingId: string) {
-    return this.adminService.payoutBooking(bookingId);
+  async payoutBooking(@GetId('id') bookingId: string, @Body('proofOfPayment') proofOfPayment: string) {
+    return this.adminService.payoutBooking(bookingId, proofOfPayment);
   }
 }
