@@ -193,6 +193,7 @@ model Booking {
   isWalkIn          Boolean @default(false)
   isCheckedIn       Boolean @default(false)
   isPaidOut         Boolean @default(false)
+  proofOfPayment    String?
   processedByStaffId String?
   staff             ManagementStaff? @relation("StaffToBooking", fields: [processedByStaffId], references: [id])
   hotelRoomId       String?

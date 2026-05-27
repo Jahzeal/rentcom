@@ -258,19 +258,19 @@ export class AdminService {
     );
   }
 
-  async payoutBooking(bookingId: string) {
+  async payoutBooking(bookingId: string, proofOfPayment?: string) {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId }
     });
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.isPaidOut) throw new BadRequestException('Booking already paid out');
 
-    if (!booking) {
-      throw new NotFoundException(`Booking with ID ${bookingId} not found`);
-    }
-
-    // @ts-ignore - isPaidOut might not be in the generated Prisma types yet
     return this.prisma.booking.update({
       where: { id: bookingId },
-      data: { isPaidOut: true }
+      data: { 
+        isPaidOut: true,
+        proofOfPayment: proofOfPayment || null
+      }
     });
   }
 }
