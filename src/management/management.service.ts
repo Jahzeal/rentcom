@@ -116,7 +116,7 @@ export class ManagementService {
 
       return hotelRooms[0];
     }, {
-      timeout: 15000
+      timeout: 60000
     });
   }
 
@@ -321,7 +321,7 @@ export class ManagementService {
 
       return booking;
     }, {
-      timeout: 15000
+      timeout: 60000
     });
   }
 
@@ -365,7 +365,7 @@ export class ManagementService {
         }
       });
     }, {
-      timeout: 15000
+      timeout: 60000
     });
   }
 
