@@ -273,4 +273,25 @@ export class AdminService {
       } as any
     });
   }
+
+  async getRefunds() {
+    return this.prisma.refundRequest.findMany({
+      include: {
+        booking: {
+          include: {
+            property: true
+          }
+        },
+        user: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async updateRefundStatus(refundId: string, status: any) {
+    return this.prisma.refundRequest.update({
+      where: { id: refundId },
+      data: { status }
+    });
+  }
 }

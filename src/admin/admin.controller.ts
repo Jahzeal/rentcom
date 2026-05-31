@@ -76,4 +76,16 @@ export class AdminController {
   async payoutBooking(@GetId('id') bookingId: string, @Body('proofOfPayment') proofOfPayment: string) {
     return this.adminService.payoutBooking(bookingId, proofOfPayment);
   }
+
+  @Get('refunds')
+  @Roles('ADMIN')
+  async getRefunds() {
+    return this.adminService.getRefunds();
+  }
+
+  @Patch('refunds/:id/status')
+  @Roles('ADMIN')
+  async updateRefundStatus(@GetId('id') refundId: string, @Body('status') status: any) {
+    return this.adminService.updateRefundStatus(refundId, status);
+  }
 }
