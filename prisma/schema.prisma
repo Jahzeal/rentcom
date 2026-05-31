@@ -46,6 +46,12 @@ model PasswordReset {
   lastSentAt DateTime
 }
 
+enum RefundStatus {
+  PENDING
+  PROCESSED
+  REJECTED
+}
+
 model User {
   id                 String                    @id @default(uuid())
   email              String                    @unique
@@ -102,6 +108,29 @@ model PushSubscription {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model File {
+  id        String   @id @default(uuid())
+  url       String
+  key       String   @unique
+  filename  String
+  mimetype  String
+  size      Int
+  createdAt DateTime @default(now())
+}
+
+model RefundRequest {
+  id             String       @id @default(uuid())
+  bookingId      String       @unique
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountExpected Int
+  reason         String?
+  status         RefundStatus @default(PENDING)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 model appliesRequested {
@@ -184,6 +213,7 @@ model Booking {
   endDate    DateTime
   status     BookingStatus @default(PENDING)
   notes      String?
+  cancellationReason String?
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
   property   Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
@@ -199,6 +229,7 @@ model Booking {
   hotelRoomId       String?
   hotelRoom         HotelRoom? @relation("RoomToBooking", fields: [hotelRoomId], references: [id], onDelete: Cascade)
   review            Review?
+  refundRequest     RefundRequest?
 
   @@index([propertyId])
   @@index([hotelRoomId])

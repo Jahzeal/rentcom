@@ -47,6 +47,17 @@ export class BookingsController {
     return this.bookingsService.getUserBookings(userId);
   }
 
+  @UseGuards(JwtGuard)
+  @Post(':id/cancel')
+  cancelBooking(
+    @GetUser('id') userId: string, 
+    @Param('id') bookingId: string,
+    @Body('reason') reason?: string,
+    @Body('estimatedRefund') estimatedRefund?: number,
+  ) {
+    return this.bookingsService.cancelBooking(userId, bookingId, reason, estimatedRefund);
+  }
+
   @UseGuards(JwtGuard, RolesGuard)
   @Get('admin')
   @Roles('ADMIN')

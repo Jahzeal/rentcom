@@ -408,4 +408,57 @@ export class BookingsService {
 
     return booking;
   }
+
+  async cancelBooking(userId: string, bookingId: string, reason?: string, estimatedRefund: number = 0) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        user: true,
+        property: true,
+      }
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    if (booking.userId !== userId) {
+      throw new BadRequestException('You do not have permission to cancel this booking');
+    }
+
+    if (booking.status === 'CANCELLED' || booking.status === 'CHECKED_OUT') {
+      throw new BadRequestException(`Booking cannot be cancelled because it is already ${booking.status}`);
+    }
+
+    // Update booking status
+    const updatedBooking = await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { 
+        status: 'CANCELLED',
+        cancellationReason: reason
+      },
+    });
+
+    // Create a Refund Request if a refund is due
+    if (estimatedRefund > 0) {
+      try {
+        await this.prisma.refundRequest.create({
+          data: {
+            bookingId: booking.id,
+            userId: booking.user.id,
+            amountExpected: estimatedRefund,
+            reason: reason || 'No reason provided',
+            status: 'PENDING',
+          }
+        });
+      } catch (e) {
+        console.error('Failed to create Refund Request', e);
+      }
+    }
+
+    return {
+      message: 'Booking cancelled successfully',
+      booking: updatedBooking,
+    };
+  }
 }

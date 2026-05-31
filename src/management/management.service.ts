@@ -575,7 +575,7 @@ export class ManagementService {
     return updatedBooking;
   }
 
-  async checkoutBooking(userId: string, bookingId: string) {
+  async checkoutBooking(userId: string, bookingId: string, body?: any) {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       include: { property: true }
@@ -601,6 +601,22 @@ export class ManagementService {
         where: { id: booking.hotelRoomId },
         data: { status: 'AVAILABLE' }
       });
+    }
+
+    if (body?.estimatedRefund > 0) {
+      try {
+        await this.prisma.refundRequest.create({
+          data: {
+            bookingId: booking.id,
+            userId: booking.userId,
+            amountExpected: body.estimatedRefund,
+            reason: body.reason || 'Over-the-counter early checkout',
+            status: 'PROCESSED',
+          }
+        });
+      } catch (e) {
+        console.error('Failed to log checkout Refund Request', e);
+      }
     }
 
     return updatedBooking;
