@@ -149,4 +149,17 @@ export class ManagementController {
   getPresence(@Req() req: any) {
     return this.managementService.getPresence(req.user.id);
   }
+
+  // --- Refunds ---
+  @UseGuards(JwtGuard)
+  @Get('refunds')
+  getRefunds(@Req() req: any) {
+    return this.managementService.getRefunds(req.user.id);
+  }
+
+  @UseGuards(JwtGuard)
+  @Patch('refunds/:id/status')
+  updateRefundStatus(@Req() req: any, @Param('id') refundId: string, @Body('status') status: any) {
+    return this.managementService.updateRefundStatus(req.user.id, refundId, status);
+  }
 }
