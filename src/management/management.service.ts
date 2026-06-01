@@ -668,6 +668,49 @@ export class ManagementService {
     }));
   }
 
+  // --- Refunds (Agent View) ---
+  async getRefunds(userId: string) {
+    let agentId = userId;
+    const staff = await this.prisma.managementStaff.findUnique({ where: { id: userId } });
+    if (staff) agentId = staff.agentId;
+
+    return this.prisma.refundRequest.findMany({
+      where: {
+        booking: { property: { userId: agentId, deletedAt: null } }
+      },
+      include: {
+        booking: {
+          include: {
+            property: true
+          }
+        },
+        user: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async updateRefundStatus(userId: string, refundId: string, status: any) {
+    let agentId = userId;
+    const staff = await this.prisma.managementStaff.findUnique({ where: { id: userId } });
+    if (staff) agentId = staff.agentId;
+
+    const refund = await this.prisma.refundRequest.findUnique({
+      where: { id: refundId },
+      include: { booking: { include: { property: true } } }
+    });
+
+    if (!refund) throw new NotFoundException('Refund request not found');
+    if (refund.booking.property.userId !== agentId) {
+      throw new ForbiddenException('You do not have permission to modify this refund');
+    }
+
+    return this.prisma.refundRequest.update({
+      where: { id: refundId },
+      data: { status }
+    });
+  }
+
   // --- Shift Tracking & Presence ---
   async clockIn(dto: ClockInDto) {
     const staff = await this.prisma.managementStaff.findUnique({
