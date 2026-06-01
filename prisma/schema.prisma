@@ -96,6 +96,7 @@ model User {
   staffAccounts      ManagementStaff[]         @relation("AgentToStaff")
   supportTickets     SupportTicket[]
   reviews            Review[]
+  refundRequests     RefundRequest[]
 }
 
 model PushSubscription {
